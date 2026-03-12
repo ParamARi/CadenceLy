@@ -1,0 +1,16 @@
+{
+  "packageManager": "pnpm@9.12.2",
+  "dependencies": {
+    "@tanstack/react-table": "^8.21.3",
+    "ag-grid-community": "^35.1.0"
+  },
+  "devDependencies": {
+    "turbo": "^2.8.16"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "dev": "turbo run dev"
+  }
+}

@@ -1,138 +1,117 @@
-"use client"
-import Image from "next/image";
-import { JSXElementConstructor, ReactElement, ReactNode, ReactPortal, useEffect, useState } from "react";
-import YTMusic from "ytmusic-api"
-import { SongDetailed } from "ytmusic-api";
-import ytmClient from "@/lib/ytmClient";
+"use client";
+
+import { FormEvent, useMemo, useState } from "react";
+import type { ArtistSearchResult, SongSearchResult } from "@/lib/types";
+import SongResultsTable from "./SongResultsTable";
+import ArtistResultsTable from "./ArtistResultsTable";
+import SearchTypeToggle from "./SearchTypeToggle";
 
 export default function Home() {
-  const [searchResults, setSearchResults] = useState(Array<SongDetailed>());
+  const [query, setQuery] = useState("");
+  const [songResults, setSongResults] = useState<SongSearchResult[]>([]);
+  const [artistResults, setArtistResults] = useState<ArtistSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchType, setSearchType] = useState<"song" | "artist" | "album">(
+    "song"
+  );
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const response = await fetch("/api/songs?songName=Never gonna give you up");
-        if (!response.ok) {
-          throw new Error("Failed to fetch song details");
+  const handleSearch = useMemo(
+    () =>
+      async (event: FormEvent) => {
+        event.preventDefault();
+
+        if (!query.trim()) return;
+
+        try {
+          setIsSearching(true);
+          setError(null);
+
+          const response = await fetch(
+            `/api/songs?songName=${encodeURIComponent(
+              query.trim()
+            )}&type=${searchType}`
+          );
+
+          if (!response.ok) {
+            throw new Error("Failed to fetch song details");
+          }
+
+          const data = await response.json();
+          if (searchType === "artist") {
+            const artists: ArtistSearchResult[] = data.search ?? [];
+            console.log(artists);
+            setArtistResults(artists);
+            setSongResults([]);
+          } else {
+            const songs: SongSearchResult[] = data.search ?? [];
+            console.log(songs);
+            setSongResults(songs);
+            setArtistResults([]);
+          }
+        } catch (err) {
+          console.error("Error fetching songs:", err);
+          setError("Something went wrong while searching. Please try again.");
+          setSongResults([]);
+          setArtistResults([]);
+        } finally {
+          setIsSearching(false);
         }
-        const songs = await response.json();
-        setSearchResults(songs ?? []);
-        console.log("Fetched Songs:", songs); // Debugging
-      } catch (error) {
-        console.error('Error fetching songs:', error);
-      }
-    })();
-  },[])
+      },
+    [query, searchType]
+  );
 
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <main className="w-full max-w-3xl space-y-8">
+        <h1 className="text-4xl sm:text-5xl font-bold text-center tracking-tight">
+          Cadencle.ly
+        </h1>
+        <SearchTypeToggle value={searchType} onChange={setSearchType} />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        <form
+          onSubmit={handleSearch}
+          className="flex gap-2 items-center mt-4"
+        >
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by song, artist, or album..."
+            className="flex-1 h-11 rounded-full border border-black/10 dark:border-white/15 bg-background px-4 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            type="submit"
+            disabled={isSearching}
+            className="h-11 px-5 rounded-full bg-blue-600 text-white text-sm sm:text-base font-medium hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-        {searchResults.length > 0 ? (
-          searchResults.map((song: SongDetailed, index) => (
-            console.log("Song Data:", song),
-            <div key={index}>
-              <p> Song Name: {song["name"] || "Unknown"}</p>
-              <p> Video Id: {song["artist"]?.name || "Unknown"}</p>
-              <p> Index {index}</p>
-            </div>
-          ))
-        ) : (
-          <p>No results found.</p>
+            {isSearching ? "Searching..." : "Search"}
+          </button>
+        </form>
+
+        {error && (
+          <p className="text-sm text-red-500 text-center mt-2">{error}</p>
         )}
+
+        <section className="mt-4">
+          {searchType === "artist" ? (
+            artistResults.length > 0 ? (
+              <ArtistResultsTable results={artistResults} />
+            ) : (
+              <p className="text-sm text-center text-gray-500">
+                Start by searching for an artist above.
+              </p>
+            )
+          ) : songResults.length > 0 ? (
+            <SongResultsTable results={songResults} />
+          ) : (
+            <p className="text-sm text-center text-gray-500">
+              Start by searching for a song above.
+              {songResults.length}
+            </p>
+          )}
+        </section>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
