@@ -1,16 +1,25 @@
 {
+  "name": "cadencely-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cadence.ly - Search for songs and discover BPM information",
   "packageManager": "pnpm@9.12.2",
+  "workspaces": [
+    "cadencely"
+  ],
   "dependencies": {
+    "@material-tailwind/react": "^2.1.10",
     "@tanstack/react-table": "^8.21.3",
     "ag-grid-community": "^35.1.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.1",
     "turbo": "^2.8.16"
   },
   "scripts": {
+    "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "test": "turbo run test",
-    "dev": "turbo run dev"
+    "test": "turbo run test"
   }
 }

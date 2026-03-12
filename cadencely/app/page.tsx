@@ -4,7 +4,7 @@ import { FormEvent, useMemo, useState } from "react";
 import type { ArtistSearchResult, SongSearchResult } from "@/lib/types";
 import SongResultsTable from "./SongResultsTable";
 import ArtistResultsTable from "./ArtistResultsTable";
-import SearchTypeToggle from "./SearchTypeToggle";
+import SearchSettings from "./SearchSettings";
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -62,12 +62,12 @@ export default function Home() {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <main className="w-full max-w-3xl space-y-8">
-        <h1 className="text-4xl sm:text-5xl font-bold text-center tracking-tight">
-          Cadencle.ly
+    <div className="bg-gray-50 min-h-screen flex items-center justify-center px-8 py-16">
+      <main className="w-full max-w-3xl p-6 bg-white rounded-lg shadow-md">
+        <h1 className="text-4xl font-extrabold text-center text-gray-800 mb-10">
+          Cadence.ly
         </h1>
-        <SearchTypeToggle value={searchType} onChange={setSearchType} />
+        <SearchSettings value={searchType} onChange={setSearchType} />
 
         <form
           onSubmit={handleSearch}
@@ -78,7 +78,7 @@ export default function Home() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by song, artist, or album..."
-            className="flex-1 h-11 rounded-full border border-black/10 dark:border-white/15 bg-background px-4 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 h-11 rounded-full border border-gray-300 bg-gray-100 px-4 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             type="submit"
