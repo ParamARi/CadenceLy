@@ -10,6 +10,7 @@ module.exports = {
             fontFamily: {
                 sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
                 mono: ['var(--font-geist-mono)', 'monospace'],
+                // bitcount: ['var(--font-bitcount)', 'monospace'],
             },
             colors: {
                 primary: {
@@ -32,6 +33,7 @@ module.exports = {
                     light: "var(--color-text-light)",
                     dark: "var(--color-text-dark)",
                 },
+            },
         },
     },
     plugins: [],

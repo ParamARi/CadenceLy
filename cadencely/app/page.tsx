@@ -64,26 +64,26 @@ export default function Home() {
   return (
     <div className="bg-gray-50 min-h-screen flex items-center justify-center px-8 py-16">
       <main className="w-full max-w-3xl p-6 bg-white rounded-lg shadow-md">
-        <h1 className="text-4xl font-extrabold text-center text-gray-800 mb-10">
+        <h1 className="font-bitcount text-12xl font-extrabold text-center text-gray-800 mb-10">
           Cadence.ly
         </h1>
         <SearchSettings value={searchType} onChange={setSearchType} />
 
         <form
           onSubmit={handleSearch}
-          className="flex gap-2 items-center mt-4"
+          className="items-center mt-6 mb-4 px-4 grid grid-cols-4 gap-4 max-w-8"
         >
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by song, artist, or album..."
-            className="flex-1 h-11 rounded-full border border-gray-300 bg-gray-100 px-4 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="col-span-3 border border-gray-300 bg-gray-100 px-4 py-2 text-sm lg:text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             type="submit"
             disabled={isSearching}
-            className="h-11 px-5 rounded-full bg-blue-600 text-white text-sm sm:text-base font-medium hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            className="col-span-1 px-6 py-2 rounded bg-blue-600 text-white text-sm sm:text-base font-medium hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
             {isSearching ? "Searching..." : "Search"}
           </button>

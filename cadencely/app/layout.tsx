@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import "../../src/styles/tailwind.css";
-import "../../src/styles/globals.css";
-import { ThemeProvider } from "@/lib/ThemeContext";
 
+import "../../src/styles/globals.css";
+import "../../src/styles/tailwind.css";
+import { Providers } from "./providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,10 +27,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+      <link rel="preconnect" href="https://fonts.googleapis.com"/>
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin=""/>
+      <link href="https://fonts.googleapis.com/css2?family=Bitcount+Grid+Double+Ink:wght@100..900&display=swap" rel="stylesheet"/>
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}>
-        <ThemeProvider>
-          {children}
-        </ThemeProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

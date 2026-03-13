@@ -1,8 +1,10 @@
-@tailwind
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Light theme colors */
 :root {
-    --bg-primary: #ffffff;
+    --bg-primary: #cfbaff;
     --bg-secondary: #f3f4f6;
     --text-primary: #1f2937;
     --text-secondary: #6b7280;
@@ -16,9 +18,9 @@
 /* Dark theme colors */
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg-primary: #111827;
-        --bg-secondary: #1f2937;
-        --text-primary: #f3f4f6;
+        --bg-primary: #2d0c4f;
+        --bg-secondary: #29323e;
+        --text-primary: #c6b3df;
         --text-secondary: #9ca3af;
         --border-color: #374151;
         --input-bg: #1f2937;
@@ -28,12 +30,21 @@
     }
 }
 
+/* Global Fonts */
+/* @font-face {
+    font-family: 'Inter';
+    src: url('/fonts/Inter-Regular.woff2') format('woff2'),
+         url('/fonts/Inter-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+} */
+
 /* Global styles */
-* {
-    margin: 0;
-    padding: 0;
+/* * {
+    margin: 5;
+    padding: 5;
     box-sizing: border-box;
-}
+} */
 
 html, body {
     width: 100%;
@@ -44,10 +55,6 @@ body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
     transition: background-color 0.3s ease, color 0.3s ease;
-    font-family: inherit;
-}
-
-/* Smooth transitions for theme changes */
-* {
+    font-family: 'Geist Mono', sans-serif;
     @apply transition-colors duration-300;
 }
