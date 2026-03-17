@@ -1,8 +1,11 @@
+const flowbite = require("flowbite-react/tailwind");
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
     content: [
         "./src/**/*.{js,ts,jsx,tsx}",
         "./cadencely/**/*.{js,ts,jsx,tsx}",
+        flowbite.content(),
     ],
     darkMode: "media", // Use class strategy for theme switching
     theme: {
@@ -36,5 +39,7 @@ module.exports = {
             },
         },
     },
-    plugins: [],
+    plugins: [
+        flowbite.plugin(),
+    ],
 };

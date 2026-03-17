@@ -1,4 +1,6 @@
 
+import { Radio, Label, TextInput } from "flowbite-react";
+
 export type SearchSettingsProps = {
   searchType: "song" | "artist" | "album";
   minBPM: number;
@@ -13,66 +15,70 @@ export default function SearchSettings({
   onBpmChange,
 }: SearchSettingsProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 px-6 md:grid-cols-2 md:gap-10 md:items-center">
+    <div className="flex flex-col gap-4 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 mt-4">
       {/* Search type radios */}
-      <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
-        <label className="inline-flex items-center gap-2 cursor-pointer">
-          <input
-            type="radio"
-            name="searchType"
-            value="song"
-            checked={searchType === "song"}
-            onChange={() => onChange("song")}
-            className="h-5 w-5 border rounded-full focus:ring-2 [border-color:var(--border-color)]"
-          />
-          <span className="[color:var(--text-primary)]">Song</span>
-        </label>
-        <label className="inline-flex items-center gap-2 cursor-pointer">
-          <input
-            type="radio"
-            name="searchType"
-            value="artist"
-            checked={searchType === "artist"}
-            onChange={() => onChange("artist")}
-            className="h-5 w-5 border rounded-full focus:ring-2 [border-color:var(--border-color)]"
-          />
-          <span className="[color:var(--text-primary)]">Artist</span>
-        </label>
-        <div className="inline-flex items-center gap-2 cursor-pointer pr-4">
-          <input
-            type="radio"
-            name="searchType"
-            value="album"
-            checked={searchType === "album"}
-            onChange={() => onChange("album")}
-            className="h-5 w-5 border rounded-full focus:ring-2 [border-color:var(--border-color)]"
-          />
-          <span className="[color:var(--text-primary)]">Album</span>
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-6 w-full">
+        <div className="flex gap-6">
+          <div className="flex items-center gap-2">
+            <Radio
+              id="type-song"
+              name="searchType"
+              value="song"
+              checked={searchType === "song"}
+              onChange={() => onChange("song")}
+            />
+            <Label htmlFor="type-song" className="font-medium">Song</Label>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Radio
+              id="type-artist"
+              name="searchType"
+              value="artist"
+              checked={searchType === "artist"}
+              onChange={() => onChange("artist")}
+            />
+            <Label htmlFor="type-artist" className="font-medium">Artist</Label>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Radio
+              id="type-album"
+              name="searchType"
+              value="album"
+              checked={searchType === "album"}
+              onChange={() => onChange("album")}
+            />
+            <Label htmlFor="type-album" className="font-medium">Album</Label>
+          </div>
         </div>
+        
         {/* Tempo range */}
-        <div className="inline-flex items-center gap-2 cursor-pointer pl-4">
-          <span className="[color:var(--text-primary)] pl-4">Tempo Range</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            placeholder="Min"
-            onChange={(e) => onBpmChange("min", parseInt(e.target.value))}
-            className="w-16 rounded border px-4 py-1 text-xs sm:text-sm focus:outline-none focus:ring-2 bg-inherit text-inherit"
-          />
-          <span className="[color:var(--text-secondary)]">–</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            placeholder="Max"
-            onChange={(e) => onBpmChange("max", parseInt(e.target.value))}
-            className="w-16 rounded border px-2 py-1 text-xs sm:text-sm focus:outline-none focus:ring-2 bg-inherit text-inherit"
-          />
+        <div className="flex items-center gap-3 sm:pl-6 sm:border-l border-gray-200 dark:border-gray-700 w-full sm:w-auto justify-center sm:justify-start pt-4 sm:pt-0 border-t sm:border-t-0 mt-2 sm:mt-0">
+          <Label className="opacity-70">Tempo</Label>
+          <div className="flex items-center gap-2">
+            <TextInput
+              type="number"
+              inputMode="numeric"
+              min={0}
+              placeholder="Min"
+              sizing="sm"
+              onChange={(e) => onBpmChange("min", parseInt(e.target.value))}
+              className="w-20"
+            />
+            <span className="text-gray-500">–</span>
+            <TextInput
+              type="number"
+              inputMode="numeric"
+              min={0}
+              placeholder="Max"
+              sizing="sm"
+              onChange={(e) => onBpmChange("max", parseInt(e.target.value))}
+              className="w-20"
+            />
+          </div>
         </div>
       </div>
-
-      
     </div>
   );
 }

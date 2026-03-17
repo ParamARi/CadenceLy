@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, Fragment } from "react";
 import type { SongSearchResult } from "@/lib/types";
 import {
   useReactTable,
@@ -6,6 +6,7 @@ import {
   flexRender,
   createColumnHelper,
 } from "@tanstack/react-table";
+import { Table, Badge, Progress } from "flowbite-react";
 
 const columnHelper = createColumnHelper<SongSearchResult>();
 
@@ -14,8 +15,8 @@ const songColumns = [
     header: "Song",
     cell: (info) => (
       <div className="flex flex-col">
-        <span className="font-semibold text-base">{info.getValue()}</span>
-        <span className="text-xs opacity-60 mt-0.5 truncate max-w-[200px] sm:max-w-[300px]">
+        <span className="font-semibold text-base text-gray-900 dark:text-white">{info.getValue()}</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-[200px] sm:max-w-[300px]">
           {info.row.original.album.title}
         </span>
       </div>
@@ -24,7 +25,7 @@ const songColumns = [
   columnHelper.accessor("artist.name", {
     header: "Artist",
     cell: (info) => (
-      <span className="font-medium opacity-90">{info.getValue()}</span>
+      <span className="font-medium text-gray-700 dark:text-gray-300">{info.getValue()}</span>
     ),
   }),
   columnHelper.accessor("tempo", {
@@ -32,14 +33,9 @@ const songColumns = [
     cell: (info) => {
       const bpm = parseFloat(info.getValue());
       return (
-        <div className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-black/5 dark:bg-white/5 border border-[var(--border-color,currentColor)]/10">
-          <span className="font-bold mr-1 text-indigo-600 dark:text-indigo-400">
-            {isNaN(bpm) ? "-" : Math.round(bpm)}
-          </span>
-          <span className="opacity-60 text-[10px] uppercase tracking-wider">
-            BPM
-          </span>
-        </div>
+        <Badge color="indigo" size="sm" className="w-fit">
+          {isNaN(bpm) ? "-" : Math.round(bpm)} BPM
+        </Badge>
       );
     },
   }),
@@ -48,9 +44,9 @@ const songColumns = [
     cell: (info) => {
       const key = info.getValue() || "-";
       return (
-        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-mono font-medium bg-black/5 dark:bg-white/5">
+        <Badge color="gray" size="sm" className="w-fit font-mono">
           {key}
-        </span>
+        </Badge>
       );
     },
   }),
@@ -59,14 +55,14 @@ const songColumns = [
     cell: (info) => {
       const score = info.getValue() * 100;
       return (
-        <div className="flex items-center gap-2 min-w-[80px]">
-          <div className="h-1.5 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"
-              style={{ width: `${Math.max(0, Math.min(100, score))}%` }}
-            />
-          </div>
-          <span className="text-xs font-mono opacity-70 w-8 text-right">
+        <div className="flex items-center gap-3 min-w-[100px]">
+          <Progress 
+            progress={Math.max(0, Math.min(100, score))} 
+            color="purple" 
+            size="sm" 
+            className="flex-1"
+          />
+          <span className="text-xs font-mono text-gray-500 w-8 text-right">
             {Math.round(score)}%
           </span>
         </div>
@@ -93,47 +89,37 @@ export default function SongResultsTable({ results }: Props) {
   }
 
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-[var(--border-color,currentColor)]/20 shadow-md mt-8 bg-[var(--bg-secondary,transparent)] backdrop-blur-sm">
+    <div className="mt-8 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-[var(--border-color,currentColor)]/20 bg-black/5 dark:bg-white/5 text-xs uppercase tracking-wider font-semibold opacity-80">
+        <Table hoverable>
+          <Table.Head>
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
+              <Fragment key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    scope="col"
-                    className="px-6 py-5 whitespace-nowrap"
-                  >
+                  <Table.HeadCell key={header.id}>
                     {header.isPlaceholder
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
                           header.getContext()
                         )}
-                  </th>
+                  </Table.HeadCell>
                 ))}
-              </tr>
+              </Fragment>
             ))}
-          </thead>
-          <tbody className="divide-y divide-[var(--border-color,currentColor)]/10">
+          </Table.Head>
+          <Table.Body className="divide-y">
             {table.getRowModel().rows.map((row) => (
-              <tr
-                key={row.id}
-                className="hover:bg-black/5 dark:hover:bg-white/5 transition-all duration-200 group"
-              >
+              <Table.Row key={row.id} className="bg-white dark:bg-gray-800 dark:border-gray-700">
                 {row.getVisibleCells().map((cell) => (
-                  <td
-                    key={cell.id}
-                    className="px-6 py-4 align-middle group-hover:pl-7 transition-all duration-200"
-                  >
+                  <Table.Cell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
+                  </Table.Cell>
                 ))}
-              </tr>
+              </Table.Row>
             ))}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table>
       </div>
     </div>
   );

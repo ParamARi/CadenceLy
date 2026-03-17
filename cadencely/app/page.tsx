@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useMemo, useState, useCallback } from "react";
+import { Button, TextInput, Alert, Spinner } from "flowbite-react";
+import { HiSearch, HiInformationCircle } from "react-icons/hi";
 import type { ArtistSearchResult, SongSearchResult } from "@/lib/types";
 import SongResultsTable from "./SongResultsTable";
 import ArtistResultsTable from "./ArtistResultsTable";
@@ -84,48 +86,55 @@ export default function Home() {
 
         <form
           onSubmit={handleSearch}
-          className="mt-6 mb-4 px-4 md:px-10"
+          className="mt-6 mb-4 px-0"
         >
-          <div className="mx-auto flex w-[85%] max-w-xl py-6 md:py-10 items-center gap-4">
-            <div className="flex-1 rounded-full border shadow-sm transition-shadow hover:shadow-md focus-within:shadow-md focus-within:ring-2 focus-within:ring-[var(--border-color)] [background-color:var(--input-bg)] [border-color:var(--input-border)]">
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by song, artist, or album..."
-                className="w-full bg-transparent px-5 py-10 text-md md:text-base focus:outline-none text-inherit"
-              />
-            </div>
-
-            <button
+          <div className="flex w-full gap-2 px-4 sm:px-0">
+            <TextInput
+              id="search"
+              type="text"
+              icon={HiSearch}
+              placeholder="Search songs, artists, albums..."
+              required
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="flex-1"
+              sizing="lg"
+            />
+            <Button
               type="submit"
               disabled={isSearching}
-              className="shrink-0 rounded-full border px-5 py-3 text-sm sm:text-base font-medium shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transition [background-color:var(--bg-secondary)] [color:var(--text-primary)] [border-color:var(--border-color)] hover:brightness-95 active:brightness-90"
+              size="lg"
             >
+              {isSearching ? <Spinner size="sm" light={true} className="mr-2" /> : null}
               {isSearching ? "Searching..." : "Search"}
-            </button>
+            </Button>
           </div>
         </form>
 
         {error && (
-          <p className="text-sm text-red-500 text-center mt-2">{error}</p>
+          <Alert color="failure" icon={HiInformationCircle} className="mt-4 shadow-sm">
+            <span>{error}</span>
+          </Alert>
         )}
 
         <section className="mt-4">
           {searchType === "artist" ? (
             artistResults.length > 0 ? (
-              <ArtistResultsTable results={artistResults as ArtistSearchResult[]} />
+              <div className="w-full">
+                <ArtistResultsTable results={artistResults as ArtistSearchResult[]} />
+              </div>
             ) : (
-              <p className="text-sm text-center [color:var(--text-secondary)]">
+              <p className="text-sm text-center text-base-content/70">
                 Start by searching for an artist above.
               </p>
             )
           ) : songResults.length > 0 ? (
-            <SongResultsTable results={songResults} />
+            <div className="w-full">
+              <SongResultsTable results={songResults} />
+            </div>
           ) : (
-            <p className="text-sm text-center [color:var(--text-secondary)]">
+            <p className="text-sm text-center text-base-content/70">
               Start by searching for a song above.
-              {songResults.length}
             </p>
           )}
         </section>
