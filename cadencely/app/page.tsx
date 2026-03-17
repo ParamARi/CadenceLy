@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState, useCallback } from "react";
-import { Button, TextInput, Alert, Spinner } from "flowbite-react";
+import { Button, TextInput, Alert, Spinner, Label } from "flowbite-react";
 import { HiSearch, HiInformationCircle } from "react-icons/hi";
 import type { ArtistSearchResult, SongSearchResult } from "@/lib/types";
 import SongResultsTable from "./SongResultsTable";
@@ -90,7 +90,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex items-center">
-      <main className="w-full max-w-2xl p-6 rounded-lg shadow-md">
+      <main className="w-full justify-center p-10 rounded-lg shadow-md">
         <h1 className="font-bitcount text-[7rem] sm:text-[8rem] font-extrabold text-center mb-10">
           Cadence.ly
         </h1>
@@ -98,9 +98,9 @@ export default function Home() {
 
         <form
           onSubmit={handleSearch}
-          className="mt-6 mb-4 px-0"
+          className="mt-6 mb-4 px-0 justify-center items-center"
         >
-          <div className="flex w-full gap-2 px-4 sm:px-0">
+          <div className="flex w-8/9 self-center gap-2 px-4 sm:px-0">
             <TextInput
               id="search"
               type="text"

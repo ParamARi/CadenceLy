@@ -9,6 +9,7 @@ import {
   ExpandedState,
 } from "@tanstack/react-table";
 import { searchAlbumsApi } from "@/lib/search";
+import { findBestSongMatch } from "@/lib/filters";
 import { Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Button, Card } from "flowbite-react";
 import { HiChevronDown, HiChevronUp } from "react-icons/hi";
 
@@ -21,11 +22,12 @@ function TrackRow({ song, sIdx, artistName }: { song: any; sIdx: number; artistN
     async function fetchTempo() {
       setLoading(true);
       try {
-        const query = `${song.name} ${artistName || ""}`.trim();
+        const query = song.name.trim();
         const res = await fetch(`/api/songs?songName=${encodeURIComponent(query)}&type=song`);
         if (res.ok) {
           const data = await res.json();
-          const match = data.search?.[0];
+          const match = findBestSongMatch(data.search || [], artistName);
+
           if (isMounted) {
             if (match && match.tempo) {
               setTempo(Math.round(parseFloat(match.tempo)).toString());
@@ -62,7 +64,7 @@ function TrackRow({ song, sIdx, artistName }: { song: any; sIdx: number; artistN
         ) : tempo && tempo !== "-" ? (
           <Badge color="indigo" size="sm" className="w-fit inline-flex font-mono">{tempo} BPM</Badge>
         ) : (
-          <span className="opacity-50 font-normal">-</span>
+          <span className="opacity-50 text-xs italic">Not Found</span>
         )}
       </TableCell>
     </TableRow>
@@ -218,7 +220,7 @@ function SingleAlbumTracklist({ album, artistName }: { album: ArtistAlbum; artis
   }, [album.uri]);
 
   return (
-    <Card className="mt-8 border-gray-200 dark:border-gray-700 shadow-md p-2">
+    <Card className="my-8 border-gray-200 dark:border-gray-700 shadow-md p-2">
       <div className="flex items-start justify-between border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{album.title}</h2>
@@ -292,12 +294,12 @@ export default function ArtistResultsTable({ results }: Props) {
 
   // Otherwise show the list of albums
   return (
-    <div className="mt-8 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+    <div className="my-8 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
       <div className="overflow-x-auto">
         <Table hoverable className="w-full text-sm text-left">
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
-              <Fragment key={headerGroup.id}>
+              <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHeadCell key={header.id} className="whitespace-nowrap">
                     {header.isPlaceholder
@@ -308,7 +310,7 @@ export default function ArtistResultsTable({ results }: Props) {
                         )}
                   </TableHeadCell>
                 ))}
-              </Fragment>
+              </TableRow>
             ))}
           </TableHead>
           <TableBody className="divide-y">

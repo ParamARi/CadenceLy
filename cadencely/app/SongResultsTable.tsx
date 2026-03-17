@@ -32,9 +32,11 @@ const songColumns = [
     header: "BPM",
     cell: (info) => {
       const bpm = parseFloat(info.getValue());
-      return (
-        <Badge color="indigo" size="sm" className="w-fit">
-          {isNaN(bpm) ? "-" : Math.round(bpm)} BPM
+      return isNaN(bpm) ? (
+        <span className="opacity-50 text-xs italic">Not Found</span>
+      ) : (
+        <Badge color="indigo" size="sm" className="w-fit font-mono">
+          {Math.round(bpm)} BPM
         </Badge>
       );
     },
@@ -89,12 +91,12 @@ export default function SongResultsTable({ results }: Props) {
   }
 
   return (
-    <div className="mt-8 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+    <div className="my-8 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
       <div className="overflow-x-auto">
         <Table hoverable>
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
-              <Fragment key={headerGroup.id}>
+              <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHeadCell key={header.id}>
                     {header.isPlaceholder
@@ -105,7 +107,7 @@ export default function SongResultsTable({ results }: Props) {
                         )}
                   </TableHeadCell>
                 ))}
-              </Fragment>
+              </TableRow>
             ))}
           </TableHead>
           <TableBody className="divide-y">

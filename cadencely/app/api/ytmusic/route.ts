@@ -58,27 +58,48 @@ async function fetchAlbum(ytmusic: any, query: string, albumId?: string | null) 
 }
 
 async function fetchPlaylist(ytmusic: any, query: string) {
-  const searchResults = await ytmusic.searchPlaylists(query);
-  if (!searchResults || searchResults.length === 0) {
+  let playlistId = "";
+
+  // Check if query is a URL
+  try {
+    const url = new URL(query);
+    const listParam = url.searchParams.get("list");
+    if (listParam) {
+      playlistId = listParam;
+    }
+  } catch (e) {
+    // Not a valid URL, ignore
+  }
+
+  // If not a URL (or no 'list' parameter found), search for the playlist
+  if (!playlistId) {
+    const searchResults = await ytmusic.searchPlaylists(query);
+    if (!searchResults || searchResults.length === 0) {
+      return null;
+    }
+    playlistId = searchResults[0].playlistId;
+  }
+
+  try {
+    const playlistDetail = await ytmusic.getPlaylist(playlistId);
+    
+    let videos = [];
+    try {
+      videos = await ytmusic.getPlaylistVideos(playlistId);
+    } catch (err) {
+      console.error(`Failed to fetch videos for playlist ${playlistId}:`, err);
+    }
+
+    return {
+      playlist: {
+        ...playlistDetail,
+        videos: videos || [],
+      },
+    };
+  } catch (err) {
+    console.error(`Failed to get playlist details for ${playlistId}:`, err);
     return null;
   }
-
-  const playlistId = searchResults[0].playlistId;
-  const playlistDetail = await ytmusic.getPlaylist(playlistId);
-  
-  let videos = [];
-  try {
-    videos = await ytmusic.getPlaylistVideos(playlistId);
-  } catch (err) {
-    console.error(`Failed to fetch videos for playlist ${playlistId}:`, err);
-  }
-
-  return {
-    playlist: {
-      ...playlistDetail,
-      videos: videos || [],
-    },
-  };
 }
 
 export async function GET(request: Request) {
