@@ -6,6 +6,7 @@ import SongResultsTable from "./SongResultsTable";
 import ArtistResultsTable from "./ArtistResultsTable";
 import SearchSettings from "./SearchSettings";
 import { filterByBpmRange } from "@/lib/filters";
+import { searchSongsApi, searchArtistsApi } from "@/lib/search";
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -39,35 +40,27 @@ export default function Home() {
         try {
           setIsSearching(true);
           setError(null);
-
-          const response = await fetch(
-            `/api/songs?songName=${encodeURIComponent(
-              query.trim()
-            )}&type=${searchType}`
-          );
-
-          if (!response.ok) {
-            throw new Error("Failed to fetch song details");
-          }
-
-          const data = await response.json();
-          if (searchType === "artist") {
-            const artists: ArtistSearchResult[] = data.search ?? [];
-            console.log(artists);
-            setArtistResults(artists);
-            setSongResults([]);
-          } else {
-            const songs: SongSearchResult[] = data.search ?? [];
-            if(minBPM > 0) {
+          console.log("searchType", searchType);
+          if (searchType === "song") {
+            const songs = await searchSongsApi(query.trim(), searchType);
+            if (minBPM > 0) {
               const filteredSongs = filterByBpmRange(songs, minBPM, maxBPM);
               console.log("minBPM", minBPM);
               console.log("filteredSongs", filteredSongs);
               setSongResults(filteredSongs);
             } else {
               console.log("songs", songs);
-              setSongResults(songs)
+              setSongResults(songs);
             }
             setArtistResults([]);
+          } else if (searchType === "artist") {
+            const artists = await searchArtistsApi(query.trim(), searchType);
+            console.log(artists);
+            setArtistResults(artists);
+            setSongResults([]);
+          } else {
+            setArtistResults([]);
+            setSongResults([]);
           }
         } catch (err) {
           console.error("Error fetching songs:", err);
@@ -121,7 +114,7 @@ export default function Home() {
         <section className="mt-4">
           {searchType === "artist" ? (
             artistResults.length > 0 ? (
-              <ArtistResultsTable results={artistResults} />
+              <ArtistResultsTable results={artistResults as ArtistSearchResult[]} />
             ) : (
               <p className="text-sm text-center [color:var(--text-secondary)]">
                 Start by searching for an artist above.

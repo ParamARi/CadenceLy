@@ -18,8 +18,8 @@
 /* Dark theme colors */
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg-primary: #2d0c4f;
-        --bg-secondary: #29323e;
+        --bg-primary: #400b3c;
+        --bg-secondary: #441451;
         --text-primary: #c6b3df;
         --text-secondary: #9ca3af;
         --border-color: #374151;

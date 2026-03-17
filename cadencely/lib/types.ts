@@ -31,6 +31,7 @@ export type ArtistAlbum = {
   title: string;
   uri: string;
   year: string;
+  songs?: any[];
 };
 
 export type ArtistSearchResult = {
@@ -41,4 +42,9 @@ export type ArtistSearchResult = {
   albums: ArtistAlbum[];
 };
 
-
+export type AlbumSearchResult = {
+  id: string;
+  title: string;
+  uri: string;
+  year: string;
+};
