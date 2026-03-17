@@ -1,4 +1,4 @@
-import type { ArtistSearchResult, SongSearchResult, AlbumSearchResult } from "./types";
+import type { ArtistSearchResult, SongSearchResult, AlbumSearchResult, PlaylistSearchResult } from "./types";
 
 export async function searchSongsApi(
   query: string,
@@ -49,6 +49,30 @@ export async function searchArtistsApi(
   }
   
   return data.search ?? [];
+}
+
+export async function searchPlaylistsApi(
+  query: string
+): Promise<PlaylistSearchResult[]> {
+  const response = await fetch(
+    `/api/ytmusic?query=${encodeURIComponent(query)}&type=playlist`
+  );
+  if (!response.ok) {
+    throw new Error("Failed to fetch playlist details");
+  }
+  const data = await response.json();
+  if (data.playlist) {
+    return [
+      {
+        playlistId: data.playlist.playlistId || "",
+        name: data.playlist.name || data.playlist.title || "Unknown Playlist",
+        author: data.playlist.author?.name || "Unknown Author",
+        count: data.playlist.videoCount || data.playlist.videos?.length || 0,
+        songs: data.playlist.videos || [],
+      }
+    ];
+  }
+  return [];
 }
 
 export async function searchAlbumsApi(

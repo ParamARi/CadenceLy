@@ -48,3 +48,13 @@ export type AlbumSearchResult = {
   uri: string;
   year: string;
 };
+
+export type PlaylistSearchResult = {
+  id?: string;
+  playlistId: string;
+  name: string;
+  title?: string;
+  author?: string;
+  count?: number;
+  songs?: any[];
+};

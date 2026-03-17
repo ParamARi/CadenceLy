@@ -2,10 +2,10 @@
 import { Radio, Label, TextInput } from "flowbite-react";
 
 export type SearchSettingsProps = {
-  searchType: "song" | "artist" | "album";
+  searchType: "song" | "artist" | "album" | "playlist";
   minBPM: number;
   maxBPM: number;
-  onChange: (value: "song" | "artist" | "album") => void;
+  onChange: (value: "song" | "artist" | "album" | "playlist") => void;
   onBpmChange: (minOrMax: "min" | "max", tempo: number) => void;
 };
 
@@ -50,6 +50,17 @@ export default function SearchSettings({
               onChange={() => onChange("album")}
             />
             <Label htmlFor="type-album" className="font-medium">Album</Label>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Radio
+              id="type-playlist"
+              name="searchType"
+              value="playlist"
+              checked={searchType === "playlist"}
+              onChange={() => onChange("playlist")}
+            />
+            <Label htmlFor="type-playlist" className="font-medium">Playlist</Label>
           </div>
         </div>
         

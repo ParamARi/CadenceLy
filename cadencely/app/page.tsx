@@ -6,17 +6,19 @@ import { HiSearch, HiInformationCircle } from "react-icons/hi";
 import type { ArtistSearchResult, SongSearchResult } from "@/lib/types";
 import SongResultsTable from "./SongResultsTable";
 import ArtistResultsTable from "./ArtistResultsTable";
+import PlaylistResultsTable from "./PlaylistResultsTable";
 import SearchSettings from "./SearchSettings";
 import { filterByBpmRange } from "@/lib/filters";
-import { searchSongsApi, searchArtistsApi } from "@/lib/search";
+import { searchSongsApi, searchArtistsApi, searchPlaylistsApi } from "@/lib/search";
 
 export default function Home() {
   const [query, setQuery] = useState("");
   const [songResults, setSongResults] = useState<SongSearchResult[]>([]);
   const [artistResults, setArtistResults] = useState<ArtistSearchResult[]>([]);
+  const [playlistResults, setPlaylistResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchType, setSearchType] = useState<"song" | "artist" | "album">(
+  const [searchType, setSearchType] = useState<"song" | "artist" | "album" | "playlist">(
     "song"
   );
   const [minBPM, setMinBPM] = useState<number>(0);
@@ -55,20 +57,30 @@ export default function Home() {
               setSongResults(songs);
             }
             setArtistResults([]);
+            setPlaylistResults([]);
           } else if (searchType === "artist") {
             const artists = await searchArtistsApi(query.trim(), searchType);
             console.log(artists);
             setArtistResults(artists);
             setSongResults([]);
+            setPlaylistResults([]);
+          } else if (searchType === "playlist") {
+            const playlists = await searchPlaylistsApi(query.trim());
+            console.log(playlists);
+            setPlaylistResults(playlists);
+            setArtistResults([]);
+            setSongResults([]);
           } else {
             setArtistResults([]);
             setSongResults([]);
+            setPlaylistResults([]);
           }
         } catch (err) {
-          console.error("Error fetching songs:", err);
+          console.error("Error fetching data:", err);
           setError("Something went wrong while searching. Please try again.");
           setSongResults([]);
           setArtistResults([]);
+          setPlaylistResults([]);
         } finally {
           setIsSearching(false);
         }
@@ -126,6 +138,16 @@ export default function Home() {
             ) : (
               <p className="text-sm text-center text-base-content/70">
                 Start by searching for an artist above.
+              </p>
+            )
+          ) : searchType === "playlist" ? (
+            playlistResults.length > 0 ? (
+              <div className="w-full">
+                <PlaylistResultsTable results={playlistResults} />
+              </div>
+            ) : (
+              <p className="text-sm text-center text-base-content/70">
+                Start by searching for a playlist above.
               </p>
             )
           ) : songResults.length > 0 ? (
