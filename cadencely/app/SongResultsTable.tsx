@@ -6,7 +6,7 @@ import {
   flexRender,
   createColumnHelper,
 } from "@tanstack/react-table";
-import { Table, Badge, Progress } from "flowbite-react";
+import { Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Progress } from "flowbite-react";
 
 const columnHelper = createColumnHelper<SongSearchResult>();
 
@@ -92,33 +92,33 @@ export default function SongResultsTable({ results }: Props) {
     <div className="mt-8 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
       <div className="overflow-x-auto">
         <Table hoverable>
-          <Table.Head>
+          <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
               <Fragment key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <Table.HeadCell key={header.id}>
+                  <TableHeadCell key={header.id}>
                     {header.isPlaceholder
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
                           header.getContext()
                         )}
-                  </Table.HeadCell>
+                  </TableHeadCell>
                 ))}
               </Fragment>
             ))}
-          </Table.Head>
-          <Table.Body className="divide-y">
+          </TableHead>
+          <TableBody className="divide-y">
             {table.getRowModel().rows.map((row) => (
-              <Table.Row key={row.id} className="bg-white dark:bg-gray-800 dark:border-gray-700">
+              <TableRow key={row.id} className="bg-white dark:bg-gray-800 dark:border-gray-700">
                 {row.getVisibleCells().map((cell) => (
-                  <Table.Cell key={cell.id}>
+                  <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </Table.Cell>
+                  </TableCell>
                 ))}
-              </Table.Row>
+              </TableRow>
             ))}
-          </Table.Body>
+          </TableBody>
         </Table>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useMemo, Fragment, useState, useEffect, useCallback } from "react";
+import { useMemo, Fragment, useState, useEffect } from "react";
 import type { ArtistSearchResult, ArtistAlbum } from "@/lib/types";
 import {
   useReactTable,
@@ -9,6 +9,8 @@ import {
   ExpandedState,
 } from "@tanstack/react-table";
 import { searchAlbumsApi } from "@/lib/search";
+import { Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Button, Card } from "flowbite-react";
+import { HiChevronDown, HiChevronUp } from "react-icons/hi";
 
 function TrackRow({ song, sIdx, artistName }: { song: any; sIdx: number; artistName: string }) {
   const [tempo, setTempo] = useState<string | null>(null);
@@ -47,23 +49,23 @@ function TrackRow({ song, sIdx, artistName }: { song: any; sIdx: number; artistN
   }, [song.name, artistName]);
 
   return (
-    <li className="flex gap-3 justify-between items-center py-2 border-b border-[var(--border-color,currentColor)]/5 last:border-0 hover:bg-[var(--bg-secondary)] px-2 rounded-md transition-colors">
-      <div className="flex gap-3 items-center min-w-0">
-        <span className="opacity-50 w-5 text-right flex-shrink-0 text-xs font-mono">{sIdx + 1}.</span>
-        <span className="truncate text-sm font-medium" title={song.name}>
-          {song.name}
-        </span>
-      </div>
-      <div className="flex-shrink-0 text-xs font-mono bg-[var(--bg-primary)] px-2 py-1 rounded-md text-[var(--text-primary)] font-bold min-w-[60px] text-center border border-[var(--border-color)]">
+    <TableRow className="bg-white dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+      <TableCell className="w-10 opacity-50 font-mono text-xs text-right px-2 py-3">
+        {sIdx + 1}.
+      </TableCell>
+      <TableCell className="font-medium text-gray-900 dark:text-white px-2 py-3 truncate max-w-[200px]" title={song.name}>
+        {song.name}
+      </TableCell>
+      <TableCell className="px-2 py-3 text-right">
         {loading ? (
-          <span className="animate-pulse">...</span>
+          <Spinner size="sm" />
         ) : tempo && tempo !== "-" ? (
-          `${tempo} BPM`
+          <Badge color="indigo" size="sm" className="w-fit inline-flex font-mono">{tempo} BPM</Badge>
         ) : (
           <span className="opacity-50 font-normal">-</span>
         )}
-      </div>
-    </li>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -91,34 +93,37 @@ function ExpandedAlbumRow({ albumId, artistName }: { albumId: string; artistName
   }, [albumId]);
 
   return (
-    <div className="p-4 bg-[var(--bg-secondary)] border-t border-[var(--border-color)] shadow-inner">
-      <div className="px-4">
-        <h3 className="text-xs uppercase tracking-wider font-semibold opacity-70 mb-4 ml-2 flex items-center justify-between text-[var(--text-primary)]">
+    <div className="p-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 shadow-inner">
+      <div className="px-2 sm:px-4">
+        <h3 className="text-xs uppercase tracking-wider font-semibold opacity-70 mb-4 ml-2 flex items-center justify-between text-gray-900 dark:text-white">
           <span>Tracklist</span>
         </h3>
         
         {loading ? (
           <div className="flex flex-col justify-center items-center py-8">
-            <svg className="animate-spin h-6 w-6 text-[var(--text-primary)] mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span className="text-sm font-medium opacity-70 animate-pulse text-[var(--text-primary)]">Loading tracks...</span>
+            <Spinner size="xl" className="mb-3" />
+            <span className="text-sm font-medium opacity-70 animate-pulse text-gray-900 dark:text-white">Loading tracks...</span>
           </div>
         ) : (
-          <ul className="flex flex-col gap-1 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
-            {songs.map((song: any, sIdx: number) => (
-              <TrackRow
-                key={sIdx}
-                song={song}
-                sIdx={sIdx}
-                artistName={artistName}
-              />
-            ))}
-            {songs.length === 0 && (
-              <li className="text-sm opacity-50 italic py-4 ml-2 text-center">No tracks found for this album.</li>
-            )}
-          </ul>
+          <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            <Table hoverable className="w-full text-sm text-left">
+              <TableBody className="divide-y">
+                {songs.map((song: any, sIdx: number) => (
+                  <TrackRow
+                    key={sIdx}
+                    song={song}
+                    sIdx={sIdx}
+                    artistName={artistName}
+                  />
+                ))}
+                {songs.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-sm opacity-50 italic py-4 text-center">No tracks found for this album.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
     </div>
@@ -133,19 +138,19 @@ const albumColumns = [
     header: () => null,
     cell: ({ row }) => {
       return row.getCanExpand() ? (
-        <button
-          {...{
-            onClick: row.getToggleExpandedHandler(),
-            className:
-              "p-1.5 rounded-md bg-[var(--bg-secondary)] hover:brightness-95 transition-colors text-[var(--text-primary)] border border-[var(--border-color)]",
-          }}
+        <Button
+          color="gray"
+          size="xs"
+          pill
+          className="border-none hover:bg-gray-100 dark:hover:bg-gray-700"
+          onClick={row.getToggleExpandedHandler()}
         >
           {row.getIsExpanded() ? (
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--text-primary)]"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            <HiChevronUp className="h-5 w-5" />
           ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--text-primary)]"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            <HiChevronDown className="h-5 w-5" />
           )}
-        </button>
+        </Button>
       ) : null;
     },
   }),
@@ -153,12 +158,12 @@ const albumColumns = [
     header: "Album",
     cell: (info) => (
       <div className="flex items-center gap-3">
-        <div className="h-10 w-10 flex-shrink-0 rounded bg-[var(--bg-secondary)] border border-[var(--border-color)] flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-60 text-[var(--text-primary)]"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+        <div className="h-10 w-10 flex-shrink-0 rounded bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-60 text-gray-500 dark:text-gray-400"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
         </div>
         <div className="flex flex-col">
-          <span className="font-semibold text-base text-[var(--text-primary)]">{info.getValue()}</span>
-          <span className="text-xs opacity-60 mt-0.5 text-[var(--text-primary)]">{info.row.original.artistName}</span>
+          <span className="font-semibold text-base text-gray-900 dark:text-white">{info.getValue()}</span>
+          <span className="text-xs opacity-60 mt-0.5 text-gray-500 dark:text-gray-400">{info.row.original.artistName}</span>
         </div>
       </div>
     ),
@@ -166,9 +171,9 @@ const albumColumns = [
   albumColumnHelper.accessor("year", {
     header: "Year",
     cell: (info) => (
-      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-mono font-medium bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-primary)]">
+      <Badge color="gray" size="sm" className="w-fit font-mono">
         {info.getValue() || "-"}
-      </span>
+      </Badge>
     ),
   }),
   albumColumnHelper.display({
@@ -177,16 +182,13 @@ const albumColumns = [
     cell: (info) => {
       const isExpanded = info.row.getIsExpanded();
       return (
-        <span 
+        <Button
+          color={isExpanded ? "dark" : "light"}
+          size="sm"
           onClick={info.row.getToggleExpandedHandler()}
-          className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold cursor-pointer transition-colors border border-[var(--border-color)] ${
-            isExpanded 
-              ? "bg-[var(--text-primary)] text-[var(--bg-primary)] opacity-90" 
-              : "bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:brightness-95"
-          }`}
         >
           {isExpanded ? "Close Tracklist" : "View Tracklist"}
-        </span>
+        </Button>
       );
     },
   }),
@@ -216,36 +218,37 @@ function SingleAlbumTracklist({ album, artistName }: { album: ArtistAlbum; artis
   }, [album.uri]);
 
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-[var(--border-color)] shadow-md mt-8 bg-[var(--bg-primary)] p-6">
-      <div className="flex items-end justify-between mb-6 border-b border-[var(--border-color)] pb-4">
+    <Card className="mt-8 border-gray-200 dark:border-gray-700 shadow-md p-2">
+      <div className="flex items-start justify-between border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
         <div>
-          <h2 className="text-2xl font-bold text-[var(--text-primary)]">{album.title}</h2>
-          <p className="opacity-70 mt-1 text-[var(--text-primary)]">{artistName} • {album.year} {loading ? "• Loading Tracks..." : `• ${songs.length} Tracks`}</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{album.title}</h2>
+          <p className="opacity-70 mt-1 text-gray-600 dark:text-gray-400">{artistName} • {album.year} {loading ? "• Loading Tracks..." : `• ${songs.length} Tracks`}</p>
         </div>
-        <div className="h-16 w-16 flex-shrink-0 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-color)] flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-60 text-[var(--text-primary)]"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+        <div className="h-16 w-16 flex-shrink-0 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-60 text-gray-500 dark:text-gray-400"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
         </div>
       </div>
       
       {loading ? (
         <div className="flex flex-col justify-center items-center py-6">
-          <svg className="animate-spin h-6 w-6 text-[var(--text-primary)] mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span className="text-sm font-medium opacity-70 animate-pulse text-[var(--text-primary)]">Loading tracks...</span>
+          <Spinner size="xl" className="mb-3" />
+          <span className="text-sm font-medium opacity-70 animate-pulse text-gray-900 dark:text-white">Loading tracks...</span>
         </div>
       ) : (
-        <ul className="space-y-1">
-          {songs.map((song: any, sIdx: number) => (
-            <TrackRow key={sIdx} song={song} sIdx={sIdx} artistName={artistName} />
-          ))}
-          {songs.length === 0 && (
-            <li className="text-sm opacity-50 italic text-center py-4 text-[var(--text-primary)]">No tracks found for this album.</li>
-          )}
-        </ul>
+        <Table hoverable className="w-full text-sm text-left">
+          <TableBody className="divide-y">
+            {songs.map((song: any, sIdx: number) => (
+              <TrackRow key={sIdx} song={song} sIdx={sIdx} artistName={artistName} />
+            ))}
+            {songs.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={3} className="text-sm opacity-50 italic text-center py-4 text-gray-900 dark:text-white">No tracks found for this album.</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -289,74 +292,55 @@ export default function ArtistResultsTable({ results }: Props) {
 
   // Otherwise show the list of albums
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-[var(--border-color)] shadow-md mt-8 bg-[var(--bg-primary)]">
+    <div className="mt-8 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)] text-xs uppercase tracking-wider font-semibold opacity-80 text-[var(--text-primary)]">
+        <Table hoverable className="w-full text-sm text-left">
+          <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
+              <Fragment key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    scope="col"
-                    className="px-6 py-5 whitespace-nowrap"
-                  >
+                  <TableHeadCell key={header.id} className="whitespace-nowrap">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
                           header.getContext()
                         )}
-                  </th>
+                  </TableHeadCell>
                 ))}
-              </tr>
+              </Fragment>
             ))}
-          </thead>
-          <tbody className="divide-y divide-[var(--border-color)] text-[var(--text-primary)]">
+          </TableHead>
+          <TableBody className="divide-y">
             {table.getRowModel().rows.map((row) => (
               <Fragment key={row.id}>
-                <tr
-                  className={`hover:bg-[var(--bg-secondary)] transition-all duration-200 group cursor-pointer ${
-                    row.getIsExpanded() ? "bg-[var(--bg-secondary)]" : ""
+                <TableRow 
+                  className={`bg-white dark:border-gray-700 dark:bg-gray-800 cursor-pointer ${
+                    row.getIsExpanded() ? "bg-gray-50 dark:bg-gray-700/50" : ""
                   }`}
                   onClick={row.getToggleExpandedHandler()}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td
-                      key={cell.id}
-                      className="px-6 py-4 align-middle group-hover:pl-7 transition-all duration-200"
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
+                    <TableCell key={cell.id} className="whitespace-nowrap">
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
                   ))}
-                </tr>
+                </TableRow>
                 {row.getIsExpanded() && (
-                  <tr>
-                    <td colSpan={row.getVisibleCells().length} className="p-0 border-t-0">
+                  <TableRow className="bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                    <TableCell colSpan={row.getVisibleCells().length} className="p-0 border-b border-gray-200 dark:border-gray-700">
                       <ExpandedAlbumRow albumId={row.original.uri} artistName={row.original.artistName} />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
               </Fragment>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
-      {/* <style dangerouslySetInnerHTML={{__html: `
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: rgba(150, 150, 150, 0.3);
-          border-radius: 6px;
-        }
-        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-          background-color: rgba(150, 150, 150, 0.5);
-        }
-      `}} /> */}
     </div>
   );
 }
