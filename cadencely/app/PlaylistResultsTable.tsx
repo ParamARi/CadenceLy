@@ -1,11 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { PlaylistSearchResult } from "@/lib/types";
 import { findBestSongMatch } from "@/lib/filters";
 import { Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Spinner, Card } from "flowbite-react";
 
-function PlaylistTrackRow({ song, sIdx }: { song: any; sIdx: number }) {
+function PlaylistTrackRow({ song, sIdx, minBPM, maxBPM }: { song: any; sIdx: number; minBPM?: number; maxBPM?: number }) {
   const [tempo, setTempo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const isOutOfRange = useMemo(() => {
+    if (!tempo || tempo === "-") return false;
+    if (minBPM && maxBPM && minBPM > 0 && maxBPM >= minBPM) {
+      const bpm = parseInt(tempo);
+      return bpm < minBPM || bpm > maxBPM;
+    }
+    return false;
+  }, [tempo, minBPM, maxBPM]);
 
   useEffect(() => {
     let isMounted = true;
@@ -42,7 +51,7 @@ function PlaylistTrackRow({ song, sIdx }: { song: any; sIdx: number }) {
   }, [song.title, song.name, song.artists]);
 
   return (
-    <TableRow className="bg-white dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+    <TableRow className={`bg-white dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all ${isOutOfRange ? 'opacity-30 grayscale' : ''}`}>
       <TableCell className="w-10 opacity-50 font-mono text-xs text-right px-2 py-3">
         {sIdx + 1}.
       </TableCell>
@@ -69,7 +78,7 @@ function PlaylistTrackRow({ song, sIdx }: { song: any; sIdx: number }) {
   );
 }
 
-function SinglePlaylistView({ playlist }: { playlist: PlaylistSearchResult }) {
+function SinglePlaylistView({ playlist, minBPM, maxBPM }: { playlist: PlaylistSearchResult; minBPM?: number; maxBPM?: number }) {
   const songs = playlist.songs || [];
 
   return (
@@ -97,7 +106,7 @@ function SinglePlaylistView({ playlist }: { playlist: PlaylistSearchResult }) {
         <Table hoverable className="w-full text-sm text-left">
           <TableBody className="divide-y">
             {songs.map((song: any, sIdx: number) => (
-              <PlaylistTrackRow key={sIdx} song={song} sIdx={sIdx} />
+              <PlaylistTrackRow key={sIdx} song={song} sIdx={sIdx} minBPM={minBPM} maxBPM={maxBPM} />
             ))}
             {songs.length === 0 && (
               <TableRow>
@@ -115,9 +124,11 @@ function SinglePlaylistView({ playlist }: { playlist: PlaylistSearchResult }) {
 
 type Props = {
   results: PlaylistSearchResult[];
+  minBPM?: number;
+  maxBPM?: number;
 };
 
-export default function PlaylistResultsTable({ results }: Props) {
+export default function PlaylistResultsTable({ results, minBPM, maxBPM }: Props) {
   if (!results || results.length === 0) {
     return null;
   }
@@ -125,7 +136,7 @@ export default function PlaylistResultsTable({ results }: Props) {
   return (
     <div className="w-full">
       {results.map((playlist, idx) => (
-        <SinglePlaylistView key={playlist.playlistId || idx} playlist={playlist} />
+        <SinglePlaylistView key={playlist.playlistId || idx} playlist={playlist} minBPM={minBPM} maxBPM={maxBPM} />
       ))}
     </div>
   );

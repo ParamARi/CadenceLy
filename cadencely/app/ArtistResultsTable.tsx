@@ -13,9 +13,18 @@ import { findBestSongMatch } from "@/lib/filters";
 import { Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Button, Card } from "flowbite-react";
 import { HiChevronDown, HiChevronUp } from "react-icons/hi";
 
-function TrackRow({ song, sIdx, artistName }: { song: any; sIdx: number; artistName: string }) {
+function TrackRow({ song, sIdx, artistName, minBPM, maxBPM }: { song: any; sIdx: number; artistName: string; minBPM?: number; maxBPM?: number }) {
   const [tempo, setTempo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const isOutOfRange = useMemo(() => {
+    if (!tempo || tempo === "-") return false;
+    if (minBPM && maxBPM && minBPM > 0 && maxBPM >= minBPM) {
+      const bpm = parseInt(tempo);
+      return bpm < minBPM || bpm > maxBPM;
+    }
+    return false;
+  }, [tempo, minBPM, maxBPM]);
 
   useEffect(() => {
     let isMounted = true;
@@ -51,7 +60,7 @@ function TrackRow({ song, sIdx, artistName }: { song: any; sIdx: number; artistN
   }, [song.name, artistName]);
 
   return (
-    <TableRow className="bg-white dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+    <TableRow className={`bg-white dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all ${isOutOfRange ? 'opacity-30 grayscale' : ''}`}>
       <TableCell className="w-10 opacity-50 font-mono text-xs text-right px-2 py-3">
         {sIdx + 1}.
       </TableCell>
@@ -71,7 +80,7 @@ function TrackRow({ song, sIdx, artistName }: { song: any; sIdx: number; artistN
   );
 }
 
-function ExpandedAlbumRow({ albumId, artistName }: { albumId: string; artistName: string }) {
+function ExpandedAlbumRow({ albumId, artistName, minBPM, maxBPM }: { albumId: string; artistName: string; minBPM?: number; maxBPM?: number }) {
   const [songs, setSongs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -116,6 +125,8 @@ function ExpandedAlbumRow({ albumId, artistName }: { albumId: string; artistName
                     song={song}
                     sIdx={sIdx}
                     artistName={artistName}
+                    minBPM={minBPM}
+                    maxBPM={maxBPM}
                   />
                 ))}
                 {songs.length === 0 && (
@@ -196,7 +207,7 @@ const albumColumns = [
   }),
 ];
 
-function SingleAlbumTracklist({ album, artistName }: { album: ArtistAlbum; artistName: string }) {
+function SingleAlbumTracklist({ album, artistName, minBPM, maxBPM }: { album: ArtistAlbum; artistName: string; minBPM?: number; maxBPM?: number }) {
   const [songs, setSongs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -240,7 +251,7 @@ function SingleAlbumTracklist({ album, artistName }: { album: ArtistAlbum; artis
         <Table hoverable className="w-full text-sm text-left">
           <TableBody className="divide-y">
             {songs.map((song: any, sIdx: number) => (
-              <TrackRow key={sIdx} song={song} sIdx={sIdx} artistName={artistName} />
+              <TrackRow key={sIdx} song={song} sIdx={sIdx} artistName={artistName} minBPM={minBPM} maxBPM={maxBPM} />
             ))}
             {songs.length === 0 && (
               <TableRow>
@@ -256,9 +267,11 @@ function SingleAlbumTracklist({ album, artistName }: { album: ArtistAlbum; artis
 
 type Props = {
   results: ArtistSearchResult[];
+  minBPM?: number;
+  maxBPM?: number;
 };
 
-export default function ArtistResultsTable({ results }: Props) {
+export default function ArtistResultsTable({ results, minBPM, maxBPM }: Props) {
   // Flatten all albums from all artists returned
   const allAlbumsWithArtist = useMemo(() => {
     return results.flatMap((artist) =>
@@ -289,7 +302,7 @@ export default function ArtistResultsTable({ results }: Props) {
 
   // If there is only exactly one album, show all songs directly
   if (allAlbumsWithArtist.length === 1) {
-    return <SingleAlbumTracklist album={allAlbumsWithArtist[0]} artistName={allAlbumsWithArtist[0].artistName} />;
+    return <SingleAlbumTracklist album={allAlbumsWithArtist[0]} artistName={allAlbumsWithArtist[0].artistName} minBPM={minBPM} maxBPM={maxBPM} />;
   }
 
   // Otherwise show the list of albums
@@ -334,7 +347,7 @@ export default function ArtistResultsTable({ results }: Props) {
                 {row.getIsExpanded() && (
                   <TableRow className="bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                     <TableCell colSpan={row.getVisibleCells().length} className="p-0 border-b border-gray-200 dark:border-gray-700">
-                      <ExpandedAlbumRow albumId={row.original.uri} artistName={row.original.artistName} />
+                      <ExpandedAlbumRow albumId={row.original.uri} artistName={row.original.artistName} minBPM={minBPM} maxBPM={maxBPM} />
                     </TableCell>
                   </TableRow>
                 )}

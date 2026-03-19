@@ -24,13 +24,26 @@ export default function Home() {
   const [minBPM, setMinBPM] = useState<number>(0);
   const [maxBPM, setMaxBPM] = useState<number>(0);
 
+  const [isFilterApplied, setIsFilterApplied] = useState(false);
+
+  const handleApplyFilter = useCallback(() => {
+    setIsFilterApplied(true);
+  }, []);
+
+  const handleClearFilter = useCallback(() => {
+    setIsFilterApplied(false);
+    setMinBPM(0);
+    setMaxBPM(0);
+  }, []);
+
   const handleBpmChange = useCallback( (minOrMax: string, value: number) => {
     if (minOrMax == "min") {
       setMinBPM(value)
     } else {
       setMaxBPM(value)
     }
-    console.log(`BPM Set: ${minOrMax}, ${value} `);
+    // If user changes the inputs while filter is applied, maybe we un-apply it so they have to hit apply again, 
+    // or just leave it applied and let it dynamically update. Let's leave it dynamically updating if applied.
   }, []);
 
 
@@ -47,15 +60,8 @@ export default function Home() {
           console.log("searchType", searchType);
           if (searchType === "song") {
             const songs = await searchSongsApi(query.trim(), searchType);
-            if (minBPM > 0) {
-              const filteredSongs = filterByBpmRange(songs, minBPM, maxBPM);
-              console.log("minBPM", minBPM);
-              console.log("filteredSongs", filteredSongs);
-              setSongResults(filteredSongs);
-            } else {
-              console.log("songs", songs);
-              setSongResults(songs);
-            }
+            console.log("songs", songs);
+            setSongResults(songs);
             setArtistResults([]);
             setPlaylistResults([]);
           } else if (searchType === "artist") {
@@ -94,7 +100,16 @@ export default function Home() {
         <h1 className="font-bitcount text-[7rem] sm:text-[8rem] font-extrabold text-center mb-10">
           Cadence.ly
         </h1>
-        <SearchSettings searchType={searchType} minBPM={0} maxBPM={0} onChange={setSearchType} onBpmChange={handleBpmChange}/>
+        <SearchSettings 
+          searchType={searchType} 
+          minBPM={minBPM} 
+          maxBPM={maxBPM} 
+          onChange={setSearchType} 
+          onBpmChange={handleBpmChange}
+          onApplyFilter={handleApplyFilter}
+          onClearFilter={handleClearFilter}
+          isFilterApplied={isFilterApplied}
+        />
 
         <form
           onSubmit={handleSearch}
@@ -133,7 +148,11 @@ export default function Home() {
           {searchType === "artist" ? (
             artistResults.length > 0 ? (
               <div className="w-full">
-                <ArtistResultsTable results={artistResults as ArtistSearchResult[]} />
+                <ArtistResultsTable 
+                  results={artistResults as ArtistSearchResult[]} 
+                  minBPM={isFilterApplied ? minBPM : undefined} 
+                  maxBPM={isFilterApplied ? maxBPM : undefined} 
+                />
               </div>
             ) : (
               <p className="text-sm text-center text-base-content/70">
@@ -143,7 +162,11 @@ export default function Home() {
           ) : searchType === "playlist" ? (
             playlistResults.length > 0 ? (
               <div className="w-full">
-                <PlaylistResultsTable results={playlistResults} />
+                <PlaylistResultsTable 
+                  results={playlistResults} 
+                  minBPM={isFilterApplied ? minBPM : undefined} 
+                  maxBPM={isFilterApplied ? maxBPM : undefined} 
+                />
               </div>
             ) : (
               <p className="text-sm text-center text-base-content/70">
@@ -152,7 +175,11 @@ export default function Home() {
             )
           ) : songResults.length > 0 ? (
             <div className="w-full">
-              <SongResultsTable results={songResults} />
+              <SongResultsTable 
+                results={songResults} 
+                minBPM={isFilterApplied ? minBPM : undefined} 
+                maxBPM={isFilterApplied ? maxBPM : undefined} 
+              />
             </div>
           ) : (
             <p className="text-sm text-center text-base-content/70">

@@ -1,5 +1,6 @@
 import { useMemo, Fragment } from "react";
 import type { SongSearchResult } from "@/lib/types";
+import { filterByBpmRange } from "@/lib/filters";
 import {
   useReactTable,
   getCoreRowModel,
@@ -75,10 +76,17 @@ const songColumns = [
 
 type Props = {
   results: SongSearchResult[];
+  minBPM?: number;
+  maxBPM?: number;
 };
 
-export default function SongResultsTable({ results }: Props) {
-  const tableData = useMemo(() => results, [results]);
+export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
+  const tableData = useMemo(() => {
+    if (minBPM && maxBPM && minBPM > 0) {
+      return filterByBpmRange(results, minBPM, maxBPM);
+    }
+    return results;
+  }, [results, minBPM, maxBPM]);
 
   const table = useReactTable({
     data: tableData,

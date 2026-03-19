@@ -1,5 +1,5 @@
 
-import { Radio, Label, TextInput } from "flowbite-react";
+import { Radio, Label, TextInput, Button } from "flowbite-react";
 
 export type SearchSettingsProps = {
   searchType: "song" | "artist" | "album" | "playlist";
@@ -7,12 +7,20 @@ export type SearchSettingsProps = {
   maxBPM: number;
   onChange: (value: "song" | "artist" | "album" | "playlist") => void;
   onBpmChange: (minOrMax: "min" | "max", tempo: number) => void;
+  onApplyFilter: () => void;
+  onClearFilter: () => void;
+  isFilterApplied: boolean;
 };
 
 export default function SearchSettings({
   searchType,
+  minBPM,
+  maxBPM,
   onChange,
   onBpmChange,
+  onApplyFilter,
+  onClearFilter,
+  isFilterApplied,
 }: SearchSettingsProps) {
   return (
     <div className="flex flex-col gap-4 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 mt-4">
@@ -74,7 +82,8 @@ export default function SearchSettings({
               min={0}
               placeholder="Min"
               sizing="sm"
-              onChange={(e) => onBpmChange("min", parseInt(e.target.value))}
+              value={minBPM || ""}
+              onChange={(e) => onBpmChange("min", parseInt(e.target.value) || 0)}
               className="w-20"
             />
             <span className="text-gray-500">–</span>
@@ -84,9 +93,22 @@ export default function SearchSettings({
               min={0}
               placeholder="Max"
               sizing="sm"
-              onChange={(e) => onBpmChange("max", parseInt(e.target.value))}
+              value={maxBPM || ""}
+              onChange={(e) => onBpmChange("max", parseInt(e.target.value) || 0)}
               className="w-20"
             />
+          </div>
+          
+          <div className="flex items-center gap-2 ml-2">
+            {!isFilterApplied ? (
+              <Button size="sm" color="gray" onClick={onApplyFilter} disabled={!minBPM && !maxBPM}>
+                Apply Filter
+              </Button>
+            ) : (
+              <Button size="sm" color="failure" onClick={onClearFilter}>
+                Clear Filter
+              </Button>
+            )}
           </div>
         </div>
       </div>

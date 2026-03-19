@@ -15,7 +15,8 @@ To provide tempo/BPM (beats per minute) information to users who are trying to f
 - Implement authentication (e.g., "Login with Spotify", "Login with YouTube Music").
 - Allow users to pull their saved playlists, liked songs, and library directly into the app for parsing.
 
-### 2. Advanced BPM Filtering within Collections
+### 2. Advanced BPM Filtering (Next Up)
+- Allow users to apply and unapply the min/max BPM filter dynamically to all table results.
 - Enforce the global Min/Max BPM filter within Album and Playlist views.
 - When a user inputs a target range (e.g., 120 - 130 BPM), the UI should filter out non-matching tracks or distinctly highlight the ones that fall into the "sweet spot".
 
