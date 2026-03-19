@@ -1,0 +1,13 @@
+Dockerfile
+.dockerignore
+node_modules
+cadencely/node_modules
+cadencely/npm-debug.log
+README.md
+cadencely/.next
+.next
+.git
+.vscode
+.turbo
+cadencely/.env
+cadencely/.env.*.local
