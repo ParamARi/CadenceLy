@@ -8,6 +8,7 @@ import {
   createColumnHelper,
 } from "@tanstack/react-table";
 import { Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Progress } from "flowbite-react";
+import BpmTableCell from "./BpmTableCell";
 
 const columnHelper = createColumnHelper<SongSearchResult>();
 
@@ -31,16 +32,9 @@ const songColumns = [
   }),
   columnHelper.accessor("tempo", {
     header: "BPM",
-    cell: (info) => {
-      const bpm = parseFloat(info.getValue());
-      return isNaN(bpm) ? (
-        <span className="opacity-50 text-xs italic">Not Found</span>
-      ) : (
-        <Badge color="indigo" size="sm" className="w-fit font-mono">
-          {Math.round(bpm)} BPM
-        </Badge>
-      );
-    },
+    cell: (info) => (
+      <BpmTableCell song={info.row.original} />
+    ),
   }),
   columnHelper.accessor("key_of", {
     header: "Key",
