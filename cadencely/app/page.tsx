@@ -8,6 +8,7 @@ import SongResultsTable from "./SongResultsTable";
 import ArtistResultsTable from "./ArtistResultsTable";
 import PlaylistResultsTable from "./PlaylistResultsTable";
 import SearchSettings from "./SearchSettings";
+import AppFooter from "@/components/AppFooter";
 import { filterByBpmRange } from "@/lib/filters";
 import { searchSongsApi, searchArtistsApi, searchPlaylistsApi } from "@/lib/search";
 
@@ -95,8 +96,9 @@ export default function Home() {
   );
 
   return (
-    <div className="min-h-screen flex items-center">
-      <main className="w-full justify-center p-10 rounded-lg shadow-md">
+    <div className="min-h-screen flex flex-col">
+      <div className="flex flex-1 items-center">
+        <main className="w-full justify-center p-10 rounded-lg shadow-md">
         <h1 className="font-bitcount text-[7rem] sm:text-[8rem] font-extrabold text-center mb-10">
           Cadence.ly
         </h1>
@@ -187,7 +189,9 @@ export default function Home() {
             </p>
           )}
         </section>
-      </main>
+        </main>
+      </div>
+      <AppFooter />
     </div>
   );
 }

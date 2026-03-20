@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+/** Set in Azure / .env as GETSONGBPM_API_KEY (avoid hyphens in env var names). */
 const GETSONG_API_KEY = process.env.GETSONGBPM_API_KEY;
 const GETSONG_BASE_URL = "https://api.getsong.co/search/";
 
