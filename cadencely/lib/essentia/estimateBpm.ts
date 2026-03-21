@@ -3,11 +3,9 @@
  * WASM is served from /essentia/essentia-wasm.web.wasm (see scripts/copy-essentia-wasm.cjs).
  */
 
-export type EssentiaBpmResult = {
-  bpm: number;
-  /** RhythmExtractor2013 confidence; may be 0 for "degara" method */
-  confidence: number | null;
-};
+import { analyzeMonoWithEssentia, type EssentiaBpmResult } from "./analyzeMono";
+
+export type { EssentiaBpmResult };
 
 const DEFAULT_MAX_SECONDS = 90;
 
@@ -20,7 +18,6 @@ async function getEssentia() {
       const wasmMod = await import(
         /* webpackMode: "lazy-once" */ "essentia.js/dist/essentia-wasm.web.js"
       );
-      // CJS interop — runtime shape from Emscripten module
       const EssentiaWASM = (wasmMod as { default?: unknown }).default ?? wasmMod;
       const wasm = EssentiaWASM as {
         ready: Promise<unknown>;
@@ -59,28 +56,9 @@ export async function estimateBpmFromAudioFile(
     const arrayBuffer = await file.arrayBuffer();
     const buffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
     const essentia = await getEssentia();
-    let mono = essentia.audioBufferToMonoSignal(buffer);
+    const mono = essentia.audioBufferToMonoSignal(buffer);
     const sr = buffer.sampleRate;
-    const maxSamples = Math.floor(maxSeconds * sr);
-    if (mono.length > maxSamples) {
-      mono = mono.slice(0, maxSamples);
-    }
-
-    const vector = essentia.arrayToVector(mono);
-    // multifeature: slower, with confidence; degara is faster but confidence is always 0
-    const result = essentia.RhythmExtractor2013(vector, 208, "multifeature", 40);
-
-    const rawBpm = result.bpm as number;
-    const bpm = Number.isFinite(rawBpm) ? Math.round(rawBpm * 10) / 10 : NaN;
-    const conf = result.confidence;
-    const confidence =
-      typeof conf === "number" && Number.isFinite(conf) ? conf : null;
-
-    if (!Number.isFinite(bpm)) {
-      throw new Error("Could not estimate BPM from this audio.");
-    }
-
-    return { bpm, confidence };
+    return analyzeMonoWithEssentia(essentia, mono, sr, maxSeconds);
   } finally {
     await audioCtx.close().catch(() => undefined);
   }

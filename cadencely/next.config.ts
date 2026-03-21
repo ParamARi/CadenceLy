@@ -7,6 +7,13 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   transpilePackages: ["essentia.js"],
+  serverExternalPackages: [
+    "essentia.js",
+    "@distube/ytdl-core",
+    "fluent-ffmpeg",
+    "ffmpeg-static",
+    "youtube-sr",
+  ],
 };
 
 export default nextConfig;

@@ -42,6 +42,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 # ENV NEXT_TELEMETRY_DISABLED=1
 
+# ffmpeg for /api/bpm/youtube (fluent-ffmpeg); ffmpeg-static often lacks Alpine/musl builds
+RUN apk add --no-cache ffmpeg
+ENV FFMPEG_PATH=/usr/bin/ffmpeg
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
