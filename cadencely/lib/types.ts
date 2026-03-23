@@ -17,6 +17,7 @@ export type SongSearchResult = {
   id: string;
   title: string;
   uri: string;
+  videoId: string;
   tempo: string;
   time_sig: string;
   key_of: string;

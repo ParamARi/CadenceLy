@@ -12,7 +12,7 @@ const DEFAULT_MAX_SECONDS = 90;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let essentiaInitPromise: Promise<any> | null = null;
 
-async function getEssentia() {
+export async function getEssentia() {
   if (!essentiaInitPromise) {
     essentiaInitPromise = (async () => {
       const wasmMod = await import(
@@ -54,6 +54,36 @@ export async function estimateBpmFromAudioFile(
   const audioCtx = new AudioContext();
   try {
     const arrayBuffer = await file.arrayBuffer();
+    const buffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+    const essentia = await getEssentia();
+    const mono = essentia.audioBufferToMonoSignal(buffer);
+    const sr = buffer.sampleRate;
+    return analyzeMonoWithEssentia(essentia, mono, sr, maxSeconds);
+  } finally {
+    await audioCtx.close().catch(() => undefined);
+  }
+}
+
+/**
+ * Fetch audio (e.g. same-origin WAV from `/api/bpm/youtube-audio`) and estimate BPM in the browser.
+ */
+export async function estimateBpmFromFetchedAudio(
+  audioUrl: string,
+  options?: { maxSeconds?: number }
+): Promise<EssentiaBpmResult> {
+  const maxSeconds = options?.maxSeconds ?? DEFAULT_MAX_SECONDS;
+  const res = await fetch(audioUrl);
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    const msg =
+      typeof (errBody as { error?: string }).error === "string"
+        ? (errBody as { error: string }).error
+        : `Failed to fetch audio (${res.status})`;
+    throw new Error(msg);
+  }
+  const arrayBuffer = await res.arrayBuffer();
+  const audioCtx = new AudioContext();
+  try {
     const buffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
     const essentia = await getEssentia();
     const mono = essentia.audioBufferToMonoSignal(buffer);

@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import type { PlaylistSearchResult } from "@/lib/types";
 import { findBestSongMatch } from "@/lib/filters";
-import { Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Spinner, Card } from "flowbite-react";
+import { Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Spinner, Card } from "flowbite-react";
+import BpmTableCell from "./BpmTableCell";
+import { stubSongForBpmCell } from "@/lib/bpm/stubSongForBpmCell";
 
 function PlaylistTrackRow({ song, sIdx, minBPM, maxBPM }: { song: any; sIdx: number; minBPM?: number; maxBPM?: number }) {
   const [tempo, setTempo] = useState<string | null>(null);
@@ -68,10 +70,17 @@ function PlaylistTrackRow({ song, sIdx, minBPM, maxBPM }: { song: any; sIdx: num
       <TableCell className="px-2 py-3 text-right">
         {loading ? (
           <Spinner size="sm" />
-        ) : tempo && tempo !== "-" ? (
-          <Badge color="indigo" size="sm" className="w-fit inline-flex font-mono">{tempo} BPM</Badge>
         ) : (
-          <span className="opacity-50 text-xs italic">Not Found</span>
+          <BpmTableCell
+            song={stubSongForBpmCell({
+              title: (song.title || song.name || "").trim(),
+              videoId: song.videoId || "",
+              artistName:
+                song.artists?.map((a: { name: string }) => a.name).join(", ") ||
+                "",
+              apiTempo: tempo && tempo !== "-" ? tempo : null,
+            })}
+          />
         )}
       </TableCell>
     </TableRow>

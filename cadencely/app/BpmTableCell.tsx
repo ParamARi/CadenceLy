@@ -2,11 +2,19 @@
 
 import { useCallback, useState } from "react";
 import type { SongSearchResult } from "@/lib/types";
+import { estimateBpmFromFetchedAudio } from "@/lib/essentia/estimateBpm";
 import { Badge, Button, Modal, ModalBody, ModalFooter, ModalHeader, Spinner } from "flowbite-react";
 
 type Props = {
   song: SongSearchResult;
 };
+
+/** Must match server validation in `app/api/bpm/youtube-audio/route.ts` */
+const YT_VIDEO_ID = /^[\w-]{11}$/;
+
+function isValidYoutubeVideoId(id: string | undefined | null): id is string {
+  return typeof id === "string" && YT_VIDEO_ID.test(id.trim());
+}
 
 export default function BpmTableCell({ song }: Props) {
   const [localBpm, setLocalBpm] = useState<number | null>(null);
@@ -20,36 +28,48 @@ export default function BpmTableCell({ song }: Props) {
   const hasApiBpm = !Number.isNaN(apiBpm);
   const displayBpm = localBpm ?? (hasApiBpm ? apiBpm : null);
 
+  const ytId = song.videoId?.trim() ?? "";
+  const useDirectVideo = isValidYoutubeVideoId(ytId);
+
   const runYoutubeAnalysis = useCallback(async () => {
     setBusy(true);
     setError(null);
     setConfidence(null);
     setMatchedVideoId(null);
     try {
-      const res = await fetch("/api/bpm/youtube", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: song.title,
-          artist: song.artist?.name ?? "",
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(
-          typeof data.error === "string" ? data.error : "Request failed"
-        );
+      let videoId = ytId;
+      if (!useDirectVideo) {
+        const res = await fetch("/api/bpm/resolve-video", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: song.title,
+            artist: song.artist?.name ?? "",
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(
+            typeof data.error === "string"
+              ? data.error
+              : `Video lookup failed (${res.status})`
+          );
+        }
+        if (typeof data.videoId !== "string" || !YT_VIDEO_ID.test(data.videoId)) {
+          throw new Error("Invalid video id from search");
+        }
+        videoId = data.videoId;
       }
-      if (typeof data.bpm !== "number" || !Number.isFinite(data.bpm)) {
-        throw new Error("Invalid BPM response from server");
-      }
-      setLocalBpm(data.bpm);
-      setConfidence(
-        typeof data.confidence === "number" ? data.confidence : null
+
+      const audioUrl = `/api/bpm/youtube-audio?videoId=${encodeURIComponent(videoId)}`;
+      const { bpm, confidence: conf } = await estimateBpmFromFetchedAudio(
+        audioUrl,
+        { maxSeconds: 90 }
       );
-      if (typeof data.videoId === "string") {
-        setMatchedVideoId(data.videoId);
-      }
+
+      setLocalBpm(bpm);
+      setConfidence(typeof conf === "number" ? conf : null);
+      setMatchedVideoId(videoId);
       setModalOpen(false);
     } catch (err) {
       console.error(err);
@@ -59,7 +79,34 @@ export default function BpmTableCell({ song }: Props) {
     } finally {
       setBusy(false);
     }
-  }, [song.title, song.artist?.name]);
+  }, [song.title, song.artist?.name, useDirectVideo, ytId]);
+
+  const refreshYoutubeCookies = useCallback(async () => {
+    const raw = window.prompt(
+      "Paste YouTube cookies JSON (EditThisCookie export array):"
+    );
+    if (!raw) return;
+    try {
+      const res = await fetch("/api/bpm/youtube-cookies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cookies: raw }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          typeof data.error === "string"
+            ? data.error
+            : `Failed to update cookies (${res.status})`
+        );
+      }
+      setError("YouTube cookies updated. Retry analysis.");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to update YouTube cookies."
+      );
+    }
+  }, []);
 
   if (displayBpm !== null) {
     return (
@@ -69,7 +116,7 @@ export default function BpmTableCell({ song }: Props) {
         </Badge>
         {localBpm !== null && (
           <span className="text-[10px] text-gray-500 dark:text-gray-400 max-w-[200px]">
-            Estimated (Essentia, YouTube)
+            Estimated in your browser (Essentia)
             {confidence != null && confidence > 0 ? (
               <span className="ml-1 opacity-80">
                 · conf. {confidence.toFixed(2)}
@@ -82,7 +129,7 @@ export default function BpmTableCell({ song }: Props) {
                 rel="noopener noreferrer"
                 className="block mt-0.5 underline text-indigo-600 dark:text-indigo-400"
               >
-                Matched video
+                {useDirectVideo ? "Source video" : "Matched video"}
               </a>
             ) : null}
           </span>
@@ -112,19 +159,42 @@ export default function BpmTableCell({ song }: Props) {
         <ModalHeader>Estimate BPM · {song.title}</ModalHeader>
         <ModalBody>
           <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-            The server will search YouTube for this track, stream a short portion of
-            the top match, and estimate BPM with Essentia. This may take 30–90
-            seconds. YouTube&apos;s terms may restrict downloading; use only for
-            personal/non-infringing purposes.
+            {useDirectVideo ? (
+              <>
+                Your browser will download a short WAV preview from this app (audio
+                is extracted on the server), then run Essentia.js locally to estimate
+                BPM. This may take 30–90 seconds. Use only for personal,
+                non-infringing purposes.
+              </>
+            ) : (
+              <>
+                The server looks up a matching YouTube video; your browser downloads a
+                short WAV preview and runs Essentia.js locally for BPM. This may take
+                30–90 seconds. Use only for personal, non-infringing purposes.
+              </>
+            )}
           </p>
           {busy && (
             <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
               <Spinner size="sm" />
-              Downloading &amp; analyzing audio…
+              Loading audio &amp; analyzing in browser…
             </div>
           )}
           {error && (
-            <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>
+            <div className="mt-3 space-y-2">
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              {/403|Status code:\s*403/i.test(error) ? (
+                <Button
+                  size="xs"
+                  color="light"
+                  className="whitespace-nowrap"
+                  onClick={refreshYoutubeCookies}
+                  disabled={busy}
+                >
+                  Refresh YouTube Cookies
+                </Button>
+              ) : null}
+            </div>
           )}
         </ModalBody>
         <ModalFooter className="justify-between gap-2 flex-wrap">

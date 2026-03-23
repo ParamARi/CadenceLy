@@ -12,6 +12,8 @@ import { searchAlbumsApi } from "@/lib/search";
 import { findBestSongMatch } from "@/lib/filters";
 import { Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Button, Card } from "flowbite-react";
 import { HiChevronDown, HiChevronUp } from "react-icons/hi";
+import BpmTableCell from "./BpmTableCell";
+import { stubSongForBpmCell } from "@/lib/bpm/stubSongForBpmCell";
 
 function TrackRow({ song, sIdx, artistName, minBPM, maxBPM }: { song: any; sIdx: number; artistName: string; minBPM?: number; maxBPM?: number }) {
   const [tempo, setTempo] = useState<string | null>(null);
@@ -70,10 +72,15 @@ function TrackRow({ song, sIdx, artistName, minBPM, maxBPM }: { song: any; sIdx:
       <TableCell className="px-2 py-3 text-right">
         {loading ? (
           <Spinner size="sm" />
-        ) : tempo && tempo !== "-" ? (
-          <Badge color="indigo" size="sm" className="w-fit inline-flex font-mono">{tempo} BPM</Badge>
         ) : (
-          <span className="opacity-50 text-xs italic">Not Found</span>
+          <BpmTableCell
+            song={stubSongForBpmCell({
+              title: song.name,
+              artistName,
+              videoId: typeof song.videoId === "string" ? song.videoId : "",
+              apiTempo: tempo && tempo !== "-" ? tempo : null,
+            })}
+          />
         )}
       </TableCell>
     </TableRow>

@@ -12,6 +12,7 @@
     "@tanstack/react-table": "^8.21.3",
     "ag-grid-community": "^35.1.0",
     "clsx": "^2.1.1",
+    "fs": "0.0.1-security",
     "tailwind-merge": "^3.5.0",
     "ytmusic-api": "^5.3.1"
   },
