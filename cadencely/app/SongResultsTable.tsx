@@ -1,13 +1,87 @@
-import { useMemo, Fragment } from "react";
+import { useMemo, Fragment, useState, useEffect } from "react";
 import type { SongSearchResult } from "@/lib/types";
 import { filterByBpmRange } from "@/lib/filters";
+import { lookupTempoWithParsedTitleFallback } from "@/lib/bpm/lookupTempoWithParsedTitle";
 import {
   useReactTable,
   getCoreRowModel,
   flexRender,
   createColumnHelper,
 } from "@tanstack/react-table";
-import { Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Progress } from "flowbite-react";
+import { Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Progress, Spinner } from "flowbite-react";
+
+function SongParsedGetSongCell({
+  title,
+  artistName,
+}: {
+  title: string;
+  artistName: string;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [parsedArtist, setParsedArtist] = useState<string | null>(null);
+  const [parsedSong, setParsedSong] = useState<string | null>(null);
+  const [matchedSong, setMatchedSong] = useState<string | null>(null);
+  const [matchedArtist, setMatchedArtist] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function run() {
+      setLoading(true);
+      try {
+        const result = await lookupTempoWithParsedTitleFallback({
+          rawTitle: title.trim(),
+          artistName,
+        });
+        if (!isMounted) return;
+        if (result.usedParsedFallback && result.parsedSong) {
+          setParsedArtist(result.parsedArtist || "Unknown");
+          setParsedSong(result.parsedSong);
+          setMatchedSong(result.matchedSong || "Unknown");
+          setMatchedArtist(result.matchedArtist || "Unknown");
+        } else {
+          setParsedArtist(null);
+          setParsedSong(null);
+          setMatchedSong(null);
+          setMatchedArtist(null);
+        }
+      } catch {
+        if (isMounted) {
+          setParsedArtist(null);
+          setParsedSong(null);
+          setMatchedSong(null);
+          setMatchedArtist(null);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+    void run();
+    return () => {
+      isMounted = false;
+    };
+  }, [title, artistName]);
+
+  if (loading) {
+    return <Spinner size="sm" />;
+  }
+
+  if (parsedArtist && parsedSong) {
+    return (
+      <div className="flex flex-col text-[11px] text-gray-600 dark:text-gray-300 max-w-[180px] sm:max-w-[220px]">
+        <span className="font-medium truncate" title={parsedArtist}>
+          Parsed Artist: {parsedArtist} -- Matched Artist: {matchedArtist}
+        </span>
+        <span className="truncate opacity-80" title={parsedSong}>
+          Parsed Song: {parsedSong} -- Matched Song: {matchedSong}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <span className="text-xs text-gray-400 dark:text-gray-500 italic">—</span>
+  );
+}
 
 const columnHelper = createColumnHelper<SongSearchResult>();
 
@@ -27,6 +101,16 @@ const songColumns = [
     header: "Artist",
     cell: (info) => (
       <span className="font-medium text-gray-700 dark:text-gray-300">{info.getValue()}</span>
+    ),
+  }),
+  columnHelper.display({
+    id: "parsedGetSong",
+    header: "Parsed (GetSong)",
+    cell: (info) => (
+      <SongParsedGetSongCell
+        title={info.row.original.title}
+        artistName={info.row.original.artist.name}
+      />
     ),
   }),
   columnHelper.accessor("tempo", {

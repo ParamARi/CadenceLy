@@ -73,7 +73,7 @@ async function fetchPlaylist(ytmusic: any, query: string) {
 
   // If not a URL (or no 'list' parameter found), search for the playlist
   if (!playlistId) {
-    const searchResults = await ytmusic.searchPlaylists(query);
+    const searchResults = await ytmusic.searchPlaylists(query, );
     if (!searchResults || searchResults.length === 0) {
       return null;
     }

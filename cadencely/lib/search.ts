@@ -58,6 +58,7 @@ export async function searchPlaylistsApi(
     `/api/ytmusic?query=${encodeURIComponent(query)}&type=playlist`
   );
   if (!response.ok) {
+    console.error("Failed to fetch playlist details", response);
     throw new Error("Failed to fetch playlist details");
   }
   const data = await response.json();

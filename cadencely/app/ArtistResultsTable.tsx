@@ -9,12 +9,58 @@ import {
   ExpandedState,
 } from "@tanstack/react-table";
 import { searchAlbumsApi } from "@/lib/search";
-import { findBestSongMatch } from "@/lib/filters";
+import { lookupTempoWithParsedTitleFallback } from "@/lib/bpm/lookupTempoWithParsedTitle";
+import type { BpmFeedbackPostBody } from "@/lib/bpm/bpmFeedbackApi";
+import { makeBpmFeedbackKey } from "@/lib/bpm/bpmFeedbackStorage";
+import BpmFeedbackButtons from "@/components/BpmFeedbackButtons";
 import { Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Button, Card } from "flowbite-react";
 import { HiChevronDown, HiChevronUp } from "react-icons/hi";
 
+function ParsedGetSongTableCell({
+  parsedArtist,
+  parsedSong,
+  matchedArtist,
+  matchedSong,
+  loading,
+}: {
+  parsedArtist: string | null;
+  parsedSong: string | null;
+  matchedArtist: string | null;
+  matchedSong: string | null;
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <TableCell className="px-2 py-3 max-w-[180px] sm:max-w-[220px]">
+        <Spinner size="sm" />
+      </TableCell>
+    );
+  }
+  return (
+    <TableCell className="px-2 py-3 max-w-[180px] sm:max-w-[220px]">
+      {parsedArtist && parsedSong ? (
+        <div className="flex flex-col text-[11px] text-gray-600 dark:text-gray-300">
+          <span className="font-medium truncate" title={parsedArtist}>
+            Parsed Artist: {parsedArtist} -- Matched Artist: {matchedArtist}
+          </span>
+          <span className="truncate opacity-80" title={parsedSong}>
+            Parsed Song: {parsedSong} -- Matched Song: {matchedSong}
+          </span>
+        </div>
+      ) : (
+        <span className="text-xs text-gray-400 dark:text-gray-500 italic">—</span>
+      )}
+    </TableCell>
+  );
+}
+
 function TrackRow({ song, sIdx, artistName, minBPM, maxBPM }: { song: any; sIdx: number; artistName: string; minBPM?: number; maxBPM?: number }) {
   const [tempo, setTempo] = useState<string | null>(null);
+  const [usedParsedFallback, setUsedParsedFallback] = useState(false);
+  const [parsedArtist, setParsedArtist] = useState<string | null>(null);
+  const [parsedSong, setParsedSong] = useState<string | null>(null);
+  const [matchedSong, setMatchedSong] = useState<string | null>(null);
+  const [matchedArtist, setMatchedArtist] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const isOutOfRange = useMemo(() => {
@@ -31,24 +77,35 @@ function TrackRow({ song, sIdx, artistName, minBPM, maxBPM }: { song: any; sIdx:
     async function fetchTempo() {
       setLoading(true);
       try {
-        const query = song.name.trim();
-        const res = await fetch(`/api/songs?songName=${encodeURIComponent(query)}&type=song`);
-        if (res.ok) {
-          const data = await res.json();
-          const match = findBestSongMatch(data.search || [], artistName);
-
-          if (isMounted) {
-            if (match && match.tempo) {
-              setTempo(Math.round(parseFloat(match.tempo)).toString());
-            } else {
-              setTempo("-");
-            }
+        const result = await lookupTempoWithParsedTitleFallback({
+          rawTitle: song.name.trim(),
+          artistName,
+        });
+        if (isMounted) {
+          setTempo(result.tempo ?? "-");
+          setUsedParsedFallback(Boolean(result.usedParsedFallback));
+          if (result.usedParsedFallback && result.parsedSong) {
+            setParsedArtist(result.parsedArtist || "Unknown");
+            setParsedSong(result.parsedSong);
+            setMatchedSong(result.matchedSong ?? "—");
+            setMatchedArtist(result.matchedArtist ?? "—");
+          } else {
+            setParsedArtist(null);
+            setParsedSong(null);
+            setMatchedSong(result.matchedSong);
+            setMatchedArtist(result.matchedArtist);
           }
-        } else {
-          if (isMounted) setTempo("-");
         }
       } catch (err) {
-        if (isMounted) setTempo("-");
+        if (isMounted) {
+          setTempo("-");
+          setUsedParsedFallback(false);
+          setParsedArtist(null);
+          setParsedSong(null);
+          setMatchedSong(null);
+          setMatchedArtist(null);
+        }
+        console.error("Error fetching tempo", err);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -59,22 +116,99 @@ function TrackRow({ song, sIdx, artistName, minBPM, maxBPM }: { song: any; sIdx:
     };
   }, [song.name, artistName]);
 
+  const rawTitle = song.name.trim();
+  const videoId =
+    typeof song.videoId === "string" && song.videoId ? song.videoId : "";
+  const feedbackScope = `ar:${artistName}:${videoId || `row:${sIdx}`}:${rawTitle}`;
+
+  const feedbackKey = useMemo(
+    () =>
+      makeBpmFeedbackKey({
+        scope: feedbackScope,
+        rawTitle,
+        reportedTempo: tempo && tempo !== "-" ? tempo : "",
+        usedParsedFallback,
+        parsedSong,
+        parsedArtist,
+      }),
+    [
+      feedbackScope,
+      rawTitle,
+      tempo,
+      usedParsedFallback,
+      parsedSong,
+      parsedArtist,
+    ]
+  );
+
+  const showFeedback =
+    Boolean(tempo && tempo !== "-" && !loading && usedParsedFallback);
+
+  const feedbackApiPayload = useMemo(():
+    | Omit<BpmFeedbackPostBody, "vote">
+    | null => {
+    if (!showFeedback) return null;
+    return {
+      source: "artist",
+      rowIndex: sIdx,
+      rawTitle,
+      reportedTempo: tempo && tempo !== "-" ? tempo : "",
+      usedParsedFallback,
+      videoId: videoId || undefined,
+      parsedSong,
+      parsedArtist,
+      matchedSong,
+      matchedArtist,
+      artistName,
+    };
+  }, [
+    showFeedback,
+    sIdx,
+    rawTitle,
+    tempo,
+    usedParsedFallback,
+    videoId,
+    parsedSong,
+    parsedArtist,
+    matchedSong,
+    matchedArtist,
+    artistName,
+  ]);
+
   return (
     <TableRow className={`bg-white dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all ${isOutOfRange ? 'opacity-30 grayscale' : ''}`}>
       <TableCell className="w-10 opacity-50 font-mono text-xs text-right px-2 py-3">
         {sIdx + 1}.
       </TableCell>
-      <TableCell className="font-medium text-gray-900 dark:text-white px-2 py-3 truncate max-w-[200px]" title={song.name}>
-        {song.name}
+      <TableCell className="font-medium text-gray-900 dark:text-white px-2 py-3 max-w-[260px]">
+        <span className="truncate block" title={song.name}>
+          {song.name}
+        </span>
       </TableCell>
-      <TableCell className="px-2 py-3 text-right">
-        {loading ? (
-          <Spinner size="sm" />
-        ) : tempo && tempo !== "-" ? (
-          <Badge color="indigo" size="sm" className="w-fit inline-flex font-mono">{tempo} BPM</Badge>
-        ) : (
-          <span className="opacity-50 text-xs italic">Not Found</span>
-        )}
+      <ParsedGetSongTableCell
+        parsedArtist={parsedArtist}
+        parsedSong={parsedSong}
+        matchedArtist={matchedArtist}
+        matchedSong={matchedSong}
+        loading={loading}
+      />
+      <TableCell className="px-2 py-3 text-right align-top">
+        <div className="flex flex-col items-end gap-0">
+          {loading ? (
+            <Spinner size="sm" />
+          ) : tempo && tempo !== "-" ? (
+            <Badge color="indigo" size="sm" className="w-fit inline-flex font-mono">
+              {tempo} BPM
+            </Badge>
+          ) : (
+            <span className="opacity-50 text-xs italic">Not Found</span>
+          )}
+          <BpmFeedbackButtons
+            storageKey={feedbackKey}
+            visible={showFeedback}
+            apiPayload={feedbackApiPayload}
+          />
+        </div>
       </TableCell>
     </TableRow>
   );
@@ -118,6 +252,14 @@ function ExpandedAlbumRow({ albumId, artistName, minBPM, maxBPM }: { albumId: st
         ) : (
           <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
             <Table hoverable className="w-full text-sm text-left">
+              <TableHead>
+                <TableRow className="bg-gray-50 dark:bg-gray-700/50">
+                  <TableHeadCell className="w-10 px-2 py-2 text-right font-semibold">#</TableHeadCell>
+                  <TableHeadCell className="px-2 py-2 font-semibold">Track</TableHeadCell>
+                  <TableHeadCell className="px-2 py-2 font-semibold">Parsed (GetSong)</TableHeadCell>
+                  <TableHeadCell className="px-2 py-2 text-right font-semibold">BPM</TableHeadCell>
+                </TableRow>
+              </TableHead>
               <TableBody className="divide-y">
                 {songs.map((song: any, sIdx: number) => (
                   <TrackRow
@@ -131,7 +273,7 @@ function ExpandedAlbumRow({ albumId, artistName, minBPM, maxBPM }: { albumId: st
                 ))}
                 {songs.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-sm opacity-50 italic py-4 text-center">No tracks found for this album.</TableCell>
+                    <TableCell colSpan={4} className="text-sm opacity-50 italic py-4 text-center">No tracks found for this album.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -249,13 +391,21 @@ function SingleAlbumTracklist({ album, artistName, minBPM, maxBPM }: { album: Ar
         </div>
       ) : (
         <Table hoverable className="w-full text-sm text-left">
+          <TableHead>
+            <TableRow className="bg-gray-50 dark:bg-gray-700/50">
+              <TableHeadCell className="w-10 px-2 py-2 text-right font-semibold">#</TableHeadCell>
+              <TableHeadCell className="px-2 py-2 font-semibold">Track</TableHeadCell>
+              <TableHeadCell className="px-2 py-2 font-semibold">Parsed (GetSong)</TableHeadCell>
+              <TableHeadCell className="px-2 py-2 text-right font-semibold">BPM</TableHeadCell>
+            </TableRow>
+          </TableHead>
           <TableBody className="divide-y">
             {songs.map((song: any, sIdx: number) => (
               <TrackRow key={sIdx} song={song} sIdx={sIdx} artistName={artistName} minBPM={minBPM} maxBPM={maxBPM} />
             ))}
             {songs.length === 0 && (
               <TableRow>
-                <TableCell colSpan={3} className="text-sm opacity-50 italic text-center py-4 text-gray-900 dark:text-white">No tracks found for this album.</TableCell>
+                <TableCell colSpan={4} className="text-sm opacity-50 italic text-center py-4 text-gray-900 dark:text-white">No tracks found for this album.</TableCell>
               </TableRow>
             )}
           </TableBody>
