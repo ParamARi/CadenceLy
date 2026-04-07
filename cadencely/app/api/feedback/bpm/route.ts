@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import {
   parseBpmFeedbackPostBody,
   type BpmFeedbackPostBody,
@@ -21,6 +22,17 @@ export function GET() {
 }
 
 export async function POST(request: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Sign in with Google to submit BPM feedback or suggestions.",
+      },
+      { status: 401 }
+    );
+  }
+
   let json: unknown;
   try {
     json = await request.json();
@@ -43,6 +55,9 @@ export async function POST(request: Request) {
     ...parsed.body,
     clientSentAt:
       parsed.body.clientSentAt ?? new Date().toISOString(),
+    submittedByEmail: session.user.email ?? null,
+    submittedByName: session.user.name ?? null,
+    submittedBySub: session.user.id ?? null,
   };
 
   const upstreamUrl = getBpmFeedbackUpstreamUrl();
@@ -96,7 +111,7 @@ export async function POST(request: Request) {
   }
 
   const id = randomUUID();
-  logFeedbackStub(id, parsed.body);
+  logFeedbackStub(id, payload);
 
   return NextResponse.json(
     {
@@ -108,7 +123,14 @@ export async function POST(request: Request) {
   );
 }
 
-function logFeedbackStub(id: string, body: BpmFeedbackPostBody) {
+function logFeedbackStub(
+  id: string,
+  body: BpmFeedbackPostBody & {
+    submittedByEmail?: string | null;
+    submittedByName?: string | null;
+    submittedBySub?: string | null;
+  }
+) {
   console.info("[api/feedback/bpm] stub", id, {
     vote: body.vote,
     source: body.source,
@@ -120,5 +142,7 @@ function logFeedbackStub(id: string, body: BpmFeedbackPostBody) {
     videoId: body.videoId,
     suggestedArtist: body.suggestedArtist,
     suggestedSong: body.suggestedSong,
+    suggestedTempo: body.suggestedTempo,
+    submittedByEmail: body.submittedByEmail,
   });
 }

@@ -1,10 +1,22 @@
-import { useState, useEffect, useMemo } from "react";
 import type { PlaylistSearchResult } from "@/lib/types";
-import { lookupTempoWithParsedTitleFallback } from "@/lib/bpm/lookupTempoWithParsedTitle";
-import type { BpmFeedbackPostBody } from "@/lib/bpm/bpmFeedbackApi";
-import { makeBpmFeedbackKey } from "@/lib/bpm/bpmFeedbackStorage";
+import { ParsedGetSongTableCell } from "@/components/results/ParsedGetSongTableCell";
+import { TapBpmModalRoot } from "@/components/results/TapBpmModalRoot";
+import { useTapBpmSession } from "@/hooks/useTapBpmSession";
+import { useTrackRowTempoFeedback } from "@/hooks/useTrackRowTempoFeedback";
 import BpmFeedbackButtons from "@/components/BpmFeedbackButtons";
-import { Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Spinner, Card } from "flowbite-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeadCell,
+  TableRow,
+  Badge,
+  Spinner,
+  Card,
+  Button,
+} from "flowbite-react";
+import type { TapBpmSession } from "@/components/TapBpmModal";
 
 function PlaylistTrackRow({
   song,
@@ -12,133 +24,47 @@ function PlaylistTrackRow({
   playlistId,
   minBPM,
   maxBPM,
+  onOpenTapBpm,
 }: {
   song: any;
   sIdx: number;
   playlistId: string;
   minBPM?: number;
   maxBPM?: number;
+  onOpenTapBpm: (session: TapBpmSession) => void;
 }) {
-  const [tempo, setTempo] = useState<string | null>(null);
-  const [usedParsedFallback, setUsedParsedFallback] = useState(false);
-  const [parsedArtist, setParsedArtist] = useState<string | null>(null);
-  const [parsedSong, setParsedSong] = useState<string | null>(null);
-  const [matchedSong, setMatchedSong] = useState<string | null>(null);
-  const [matchedArtist, setMatchedArtist] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const isOutOfRange = useMemo(() => {
-    if (!tempo || tempo === "-") return false;
-    if (minBPM && maxBPM && minBPM > 0 && maxBPM >= minBPM) {
-      const bpm = parseInt(tempo);
-      return bpm < minBPM || bpm > maxBPM;
-    }
-    return false;
-  }, [tempo, minBPM, maxBPM]);
-
-  useEffect(() => {
-    let isMounted = true;
-    async function fetchTempo() {
-      setLoading(true);
-      try {
-        const query = (song.title || song.name || "").trim();
-        const artistName = song.artists?.[0]?.name || "";
-        const result = await lookupTempoWithParsedTitleFallback({
-          rawTitle: query,
-          artistName,
-        });
-        if (isMounted) {
-          setTempo(result.tempo ?? "-");
-          setUsedParsedFallback(Boolean(result.usedParsedFallback));
-          if (result.usedParsedFallback && result.parsedSong) {
-            setParsedArtist(result.parsedArtist || "Unknown");
-            setParsedSong(result.parsedSong);
-            setMatchedSong(result.matchedSong || "Unknown");
-            setMatchedArtist(result.matchedArtist || "Unknown");
-          } else {
-            setParsedArtist(null);
-            setParsedSong(null);
-            setMatchedSong(null);
-            setMatchedArtist(null);
-          }
-        }
-      } catch (err) {
-        if (isMounted) {
-          setTempo("-");
-          setUsedParsedFallback(false);
-          setParsedArtist(null);
-          setParsedSong(null);
-          setMatchedSong(null);
-          setMatchedArtist(null);
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-    fetchTempo();
-    return () => {
-      isMounted = false;
-    };
-  }, [song.title, song.name, song.artists]);
-
   const rawTitle = (song.title || song.name || "").trim();
   const videoId =
     typeof song.videoId === "string" && song.videoId ? song.videoId : "";
-  const feedbackScope = `pl:${playlistId}:${videoId || `row:${sIdx}`}:${rawTitle}`;
+  const displayArtist =
+    song.artists?.map((a: any) => a.name).join(", ") || "";
+  const lookupArtistName = song.artists?.[0]?.name || "";
 
-  const feedbackKey = useMemo(
-    () =>
-      makeBpmFeedbackKey({
-        scope: feedbackScope,
-        rawTitle,
-        reportedTempo: tempo && tempo !== "-" ? tempo : "",
-        usedParsedFallback,
-        parsedSong,
-        parsedArtist,
-      }),
-    [
-      feedbackScope,
-      rawTitle,
-      tempo,
-      usedParsedFallback,
-      parsedSong,
-      parsedArtist,
-    ]
-  );
-
-  const showFeedback =
-    Boolean(tempo && tempo !== "-" && !loading && usedParsedFallback);
-
-  const feedbackApiPayload = useMemo(():
-    | Omit<BpmFeedbackPostBody, "vote">
-    | null => {
-    if (!showFeedback) return null;
-    return {
-      source: "playlist",
-      rowIndex: sIdx,
-      rawTitle,
-      reportedTempo: tempo && tempo !== "-" ? tempo : "",
-      usedParsedFallback,
-      videoId: videoId || undefined,
-      parsedSong,
-      parsedArtist,
-      matchedSong,
-      matchedArtist,
-      playlistId: playlistId || undefined,
-    };
-  }, [
-    showFeedback,
-    sIdx,
-    rawTitle,
+  const {
     tempo,
-    usedParsedFallback,
-    videoId,
-    parsedSong,
+    loading,
     parsedArtist,
+    parsedSong,
     matchedSong,
     matchedArtist,
+    prefillSuggestedTempo,
+    onMeasuredBpmFromTap,
+    isOutOfRange,
+    feedbackKey,
+    showFeedback,
+    showNoMatchFeedback,
+    feedbackApiPayload,
+  } = useTrackRowTempoFeedback({
+    mode: "playlist",
+    rowIndex: sIdx,
+    rawTitle,
+    lookupArtistName,
+    minBPM,
+    maxBPM,
+    videoId,
     playlistId,
-  ]);
+    lookupEffectDeps: [song.title, song.name, song.artists],
+  });
 
   return (
     <TableRow className={`bg-white dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all ${isOutOfRange ? 'opacity-30 grayscale' : ''}`}>
@@ -150,23 +76,36 @@ function PlaylistTrackRow({
           <span className="font-medium text-gray-900 dark:text-white truncate" title={song.title || song.name}>
             {song.title || song.name}
           </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate" title={song.artists?.map((a: any) => a.name).join(", ")}>
-            {song.artists?.map((a: any) => a.name).join(", ")}
+          <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate" title={displayArtist}>
+            {displayArtist}
           </span>
         </div>
       </TableCell>
-      <TableCell className="px-2 py-3 max-w-[180px] sm:max-w-[220px]">
-        {parsedArtist && parsedSong ? (
-          <div className="flex flex-col text-[11px] text-gray-600 dark:text-gray-300">
-            <span className="font-medium truncate" title={parsedArtist}>
-              Parsed Artist: {parsedArtist} -- Matched Artist: {matchedArtist}
-            </span>
-            <span className="truncate opacity-80" title={parsedSong}>
-              Parsed Song: {parsedSong} -- Matched Song: {matchedSong}
-            </span>
-          </div>
+      <ParsedGetSongTableCell
+        parsedArtist={parsedArtist}
+        parsedSong={parsedSong}
+        matchedArtist={matchedArtist}
+        matchedSong={matchedSong}
+        loading={loading}
+      />
+      <TableCell className="px-2 py-3 whitespace-nowrap">
+        {videoId ? (
+          <Button
+            size="xs"
+            color="light"
+            onClick={() =>
+              onOpenTapBpm({
+                title: rawTitle,
+                artistName: displayArtist,
+                videoId: videoId || undefined,
+                onUseMeasuredBpm: onMeasuredBpmFromTap,
+              })
+            }
+          >
+            Tap BPM
+          </Button>
         ) : (
-          <span className="text-xs text-gray-400 dark:text-gray-500 italic">—</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
         )}
       </TableCell>
       <TableCell className="px-2 py-3 text-right align-top">
@@ -183,6 +122,8 @@ function PlaylistTrackRow({
           <BpmFeedbackButtons
             storageKey={feedbackKey}
             visible={showFeedback}
+            variant={showNoMatchFeedback ? "noApiMatch" : "parsedMatch"}
+            prefillSuggestedTempo={prefillSuggestedTempo}
             apiPayload={feedbackApiPayload}
           />
         </div>
@@ -191,7 +132,17 @@ function PlaylistTrackRow({
   );
 }
 
-function SinglePlaylistView({ playlist, minBPM, maxBPM }: { playlist: PlaylistSearchResult; minBPM?: number; maxBPM?: number }) {
+function SinglePlaylistView({
+  playlist,
+  minBPM,
+  maxBPM,
+  onOpenTapBpm,
+}: {
+  playlist: PlaylistSearchResult;
+  minBPM?: number;
+  maxBPM?: number;
+  onOpenTapBpm: (session: TapBpmSession) => void;
+}) {
   const songs = playlist.songs || [];
   const playlistId = playlist.playlistId || "";
 
@@ -223,6 +174,7 @@ function SinglePlaylistView({ playlist, minBPM, maxBPM }: { playlist: PlaylistSe
               <TableHeadCell className="w-10 px-2 py-2 text-right font-semibold">#</TableHeadCell>
               <TableHeadCell className="px-2 py-2 font-semibold">Track</TableHeadCell>
               <TableHeadCell className="px-2 py-2 font-semibold">Parsed (GetSong)</TableHeadCell>
+              <TableHeadCell className="px-2 py-2 font-semibold">Tap BPM</TableHeadCell>
               <TableHeadCell className="px-2 py-2 text-right font-semibold" title="When the title was parsed for GetSong, use 👍/👎 below the BPM">
                 BPM
               </TableHeadCell>
@@ -237,11 +189,12 @@ function SinglePlaylistView({ playlist, minBPM, maxBPM }: { playlist: PlaylistSe
                 playlistId={playlistId}
                 minBPM={minBPM}
                 maxBPM={maxBPM}
+                onOpenTapBpm={onOpenTapBpm}
               />
             ))}
             {songs.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-sm opacity-50 italic text-center py-4 text-gray-900 dark:text-white">
+                <TableCell colSpan={5} className="text-sm opacity-50 italic text-center py-4 text-gray-900 dark:text-white">
                   No tracks found for this playlist.
                 </TableCell>
               </TableRow>
@@ -260,15 +213,31 @@ type Props = {
 };
 
 export default function PlaylistResultsTable({ results, minBPM, maxBPM }: Props) {
+  const { session: tapBpmSession, open: openTapBpm, close: closeTapBpm } =
+    useTapBpmSession();
+
   if (!results || results.length === 0) {
     return null;
   }
 
+  const tapBpmModal = (
+    <TapBpmModalRoot session={tapBpmSession} onClose={closeTapBpm} />
+  );
+
   return (
-    <div className="w-full">
-      {results.map((playlist, idx) => (
-        <SinglePlaylistView key={playlist.playlistId || idx} playlist={playlist} minBPM={minBPM} maxBPM={maxBPM} />
-      ))}
-    </div>
+    <>
+      <div className="w-full">
+        {results.map((playlist, idx) => (
+          <SinglePlaylistView
+            key={playlist.playlistId || idx}
+            playlist={playlist}
+            minBPM={minBPM}
+            maxBPM={maxBPM}
+            onOpenTapBpm={openTapBpm}
+          />
+        ))}
+      </div>
+      {tapBpmModal}
+    </>
   );
 }

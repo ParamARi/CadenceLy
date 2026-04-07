@@ -10,7 +10,8 @@ module.exports = {
         "../node_modules/flowbite-react/**/*.{js,jsx,ts,tsx}",
         "../node_modules/flowbite/**/*.js"
     ],
-    darkMode: "media", // Use class strategy for theme switching
+    // Must match Flowbite ThemeModeScript / ThemeProvider (toggles `class="dark"` on <html>)
+    darkMode: "class",
     theme: {
         extend: {
             fontFamily: {

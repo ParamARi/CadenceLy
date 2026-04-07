@@ -22,6 +22,7 @@ export type BpmFeedbackPostBody = {
   matchedArtist?: string | null;
   suggestedSong?: string | null;
   suggestedArtist?: string | null;
+  suggestedTempo?: string | null;
   playlistId?: string | null;
   artistName?: string | null;
   /** Optional ISO timestamp from the client for future dedup / ordering */
@@ -107,6 +108,8 @@ export function parseBpmFeedbackPostBody(
       input.suggestedSong === null ? null : asString(input.suggestedSong),
     suggestedArtist:
       input.suggestedArtist === null ? null : asString(input.suggestedArtist),
+    suggestedTempo:
+      input.suggestedTempo === null ? null : asString(input.suggestedTempo),
     playlistId:
       input.playlistId === null ? null : asString(input.playlistId),
     artistName:

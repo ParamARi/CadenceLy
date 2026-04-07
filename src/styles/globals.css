@@ -4,12 +4,12 @@
 
 /* Light theme colors */
 :root {
-    --bg-primary: #cfbaff;
-    --bg-secondary: #f3f4f6;
+    --bg-primary: #d9c0ec;
+    --bg-secondary: #bccff5;
     --text-primary: #1f2937;
     --text-secondary: #6b7280;
     --border-color: #e5e7eb;
-    --input-bg: #ffffff;
+    --input-bg: #d6c7e6;
     --input-border: rgba(0, 0, 0, 0.1);
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -18,8 +18,8 @@
 /* Dark theme colors */
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg-primary: #400b3c;
-        --bg-secondary: #441451;
+        --bg-primary: #3b0837;
+        --bg-secondary: #3a1146;
         --text-primary: #c6b3df;
         --text-secondary: #9ca3af;
         --border-color: #374151;

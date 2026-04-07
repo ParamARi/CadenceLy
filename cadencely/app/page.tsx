@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState, useCallback } from "react";
+import { FormEvent, useCallback, useState } from "react";
 import { Button, TextInput, Alert, Spinner, Label } from "flowbite-react";
 import { HiSearch, HiInformationCircle } from "react-icons/hi";
 import type { ArtistSearchResult, SongSearchResult } from "@/lib/types";
@@ -9,8 +9,14 @@ import ArtistResultsTable from "./ArtistResultsTable";
 import PlaylistResultsTable from "./PlaylistResultsTable";
 import SearchSettings from "./SearchSettings";
 import AppFooter from "@/components/AppFooter";
+import UserAuthControls from "@/components/UserAuthControls";
 import { filterByBpmRange } from "@/lib/filters";
-import { searchSongsApi, searchArtistsApi, searchPlaylistsApi } from "@/lib/search";
+import {
+  searchSongsApi,
+  searchArtistsApi,
+  searchPlaylistsApi,
+  searchAlbumByQueryApi,
+} from "@/lib/search";
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -26,6 +32,8 @@ export default function Home() {
   const [maxBPM, setMaxBPM] = useState<number>(0);
 
   const [isFilterApplied, setIsFilterApplied] = useState(false);
+  /** Playlist mode: last search returned no loadable playlist (vs. initial empty state). */
+  const [playlistHadNoMatch, setPlaylistHadNoMatch] = useState(false);
 
   const handleApplyFilter = useCallback(() => {
     setIsFilterApplied(true);
@@ -48,50 +56,53 @@ export default function Home() {
   }, []);
 
 
-  const handleSearch = useMemo(
-    () =>
-      async (event: FormEvent) => {
-        event.preventDefault();
+  const handleSearch = useCallback(
+    async (event: FormEvent) => {
+      event.preventDefault();
 
-        if (!query.trim()) return;
+      if (!query.trim()) return;
 
-        try {
-          setIsSearching(true);
-          setError(null);
-          console.log("searchType", searchType);
-          if (searchType === "song") {
-            const songs = await searchSongsApi(query.trim(), searchType);
-            console.log("songs", songs);
-            setSongResults(songs);
-            setArtistResults([]);
-            setPlaylistResults([]);
-          } else if (searchType === "artist") {
-            const artists = await searchArtistsApi(query.trim(), searchType);
-            console.log(artists);
-            setArtistResults(artists);
-            setSongResults([]);
-            setPlaylistResults([]);
-          } else if (searchType === "playlist") {
-            const playlists = await searchPlaylistsApi(query.trim());
-            console.log(playlists);
-            setPlaylistResults(playlists);
-            setArtistResults([]);
-            setSongResults([]);
-          } else {
-            setArtistResults([]);
-            setSongResults([]);
-            setPlaylistResults([]);
-          }
-        } catch (err) {
-          console.error("Error fetching data:", err);
-          setError("Something went wrong while searching. Please try again.");
-          setSongResults([]);
+      try {
+        setIsSearching(true);
+        setError(null);
+        setPlaylistHadNoMatch(false);
+        if (searchType === "song") {
+          const songs = await searchSongsApi(query.trim(), searchType);
+          setSongResults(songs);
           setArtistResults([]);
           setPlaylistResults([]);
-        } finally {
-          setIsSearching(false);
+        } else if (searchType === "artist") {
+          const artists = await searchArtistsApi(query.trim());
+          setArtistResults(artists);
+          setSongResults([]);
+          setPlaylistResults([]);
+        } else if (searchType === "playlist") {
+          const playlists = await searchPlaylistsApi(query.trim());
+          setPlaylistResults(playlists);
+          setPlaylistHadNoMatch(playlists.length === 0);
+          setArtistResults([]);
+          setSongResults([]);
+        } else if (searchType === "album") {
+          const albumsAsArtistRows = await searchAlbumByQueryApi(query.trim());
+          setArtistResults(albumsAsArtistRows);
+          setSongResults([]);
+          setPlaylistResults([]);
+        } else {
+          setArtistResults([]);
+          setSongResults([]);
+          setPlaylistResults([]);
         }
-      },
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Something went wrong while searching. Please try again.");
+        setSongResults([]);
+        setArtistResults([]);
+        setPlaylistResults([]);
+        setPlaylistHadNoMatch(false);
+      } finally {
+        setIsSearching(false);
+      }
+    },
     [query, searchType]
   );
 
@@ -99,6 +110,9 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
       <div className="flex flex-1 items-center">
         <main className="w-full justify-center p-10 rounded-lg shadow-md">
+        <div className="mb-4 flex justify-end">
+          <UserAuthControls />
+        </div>
         <h1 className="font-bitcount text-[7rem] sm:text-[8rem] font-extrabold text-center mb-10">
           Cadence.ly
         </h1>
@@ -147,7 +161,7 @@ export default function Home() {
         )}
 
         <section className="mt-4">
-          {searchType === "artist" ? (
+          {searchType === "artist" || searchType === "album" ? (
             artistResults.length > 0 ? (
               <div className="w-full">
                 <ArtistResultsTable 
@@ -158,7 +172,9 @@ export default function Home() {
               </div>
             ) : (
               <p className="text-sm text-center text-base-content/70">
-                Start by searching for an artist above.
+                {searchType === "album"
+                  ? "Start by searching for an album above."
+                  : "Start by searching for an artist above."}
               </p>
             )
           ) : searchType === "playlist" ? (
@@ -171,8 +187,10 @@ export default function Home() {
                 />
               </div>
             ) : (
-              <p className="text-sm text-center text-base-content/70">
-                Start by searching for a playlist above.
+              <p className="text-sm text-center text-base-content/70 max-w-lg mx-auto">
+                {playlistHadNoMatch
+                  ? "No playlist could be loaded for that search. YouTube Music’s first matches are not always fetchable — try different keywords, or paste a full playlist URL (must include list=…)."
+                  : "Start by searching for a playlist above."}
               </p>
             )
           ) : songResults.length > 0 ? (

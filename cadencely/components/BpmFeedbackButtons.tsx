@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { Button, Spinner } from "flowbite-react";
 import { LuThumbsUp, LuThumbsDown } from "react-icons/lu";
 import type { BpmFeedbackPostBody } from "@/lib/bpm/bpmFeedbackApi";
 import type { BpmFeedbackVote } from "@/lib/bpm/bpmFeedbackStorage";
@@ -15,6 +17,13 @@ type Props = {
   /** When false, nothing is rendered */
   visible: boolean;
   className?: string;
+  /**
+   * `parsedMatch` — thumbs + optional corrections when GetSong returned a BPM.
+   * `noApiMatch` — no API BPM; submit measured tempo only (vote stays null).
+   */
+  variant?: "parsedMatch" | "noApiMatch";
+  /** Optional external BPM value to prefill the suggested tempo input. */
+  prefillSuggestedTempo?: string | null;
   /** When set, each vote change is POSTed to `/api/feedback/bpm` (fire-and-forget). */
   apiPayload?: Omit<BpmFeedbackPostBody, "vote"> | null;
 };
@@ -26,8 +35,11 @@ export default function BpmFeedbackButtons({
   storageKey,
   visible,
   className = "",
+  variant = "parsedMatch",
+  prefillSuggestedTempo = null,
   apiPayload = null,
 }: Props) {
+  const { data: session, status: authStatus } = useSession();
   const [vote, setVote] = useState<BpmFeedbackVote | null>(null);
   const [suggestedArtist, setSuggestedArtist] = useState("");
   const [suggestedSong, setSuggestedSong] = useState("");
@@ -44,37 +56,142 @@ export default function BpmFeedbackButtons({
     setSuggestionSubmitState("idle");
   }, [storageKey]);
 
+  useEffect(() => {
+    const next = prefillSuggestedTempo?.trim();
+    if (!next) return;
+    setSuggestedTempo(next);
+    setSuggestionSubmitState("idle");
+  }, [prefillSuggestedTempo]);
+
   const toggle = useCallback(
     (next: BpmFeedbackVote) => {
       const resolved = vote === next ? null : next;
       setVote(resolved);
       setBpmFeedback(storageKey, resolved);
-      if (apiPayload) {
+      if (apiPayload && session) {
         void submitBpmFeedback({
           ...apiPayload,
           vote: resolved,
           suggestedArtist: suggestedArtist.trim() || null,
           suggestedSong: suggestedSong.trim() || null,
+          suggestedTempo: suggestedTempo.trim() || null,
         });
       }
     },
-    [apiPayload, storageKey, suggestedArtist, suggestedSong, vote]
+    [
+      apiPayload,
+      session,
+      storageKey,
+      suggestedArtist,
+      suggestedSong,
+      suggestedTempo,
+      vote,
+    ]
   );
 
   const submitSuggestion = useCallback(async () => {
-    if (!apiPayload) return;
-    if (!suggestedArtist.trim() && !suggestedSong.trim()) return;
+    if (!apiPayload || !session) return;
+    const hasArtistOrSong =
+      Boolean(suggestedArtist.trim()) || Boolean(suggestedSong.trim());
+    const hasTempo = Boolean(suggestedTempo.trim());
+    if (variant === "noApiMatch") {
+      if (!hasTempo) return;
+    } else if (!hasArtistOrSong) {
+      return;
+    }
     setSuggestionSubmitState("sending");
     const result = await submitBpmFeedback({
       ...apiPayload,
       vote,
       suggestedArtist: suggestedArtist.trim() || null,
       suggestedSong: suggestedSong.trim() || null,
+      suggestedTempo: suggestedTempo.trim() || null,
     });
     setSuggestionSubmitState(result.ok ? "sent" : "error");
-  }, [apiPayload, suggestedArtist, suggestedSong, vote]);
+  }, [
+    apiPayload,
+    suggestedArtist,
+    suggestedSong,
+    suggestedTempo,
+    variant,
+    vote,
+    session,
+  ]);
 
   if (!visible) return null;
+
+  if (authStatus === "loading") {
+    return (
+      <div
+        className={`mt-1 flex items-center justify-end gap-2 text-xs text-gray-500 dark:text-gray-400 ${className}`}
+      >
+        <Spinner size="sm" />
+        <span>Checking sign-in…</span>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div
+        className={`mt-1 w-full min-w-[200px] max-w-[260px] rounded border border-amber-200 bg-amber-50 p-2 text-left dark:border-amber-900/50 dark:bg-amber-950/30 ${className}`}
+      >
+        <p className="mb-2 text-[10px] text-gray-600 dark:text-gray-300">
+          Sign in with Google to send BPM feedback, suggestions, or measured
+          tempos.
+        </p>
+        <Button
+          size="xs"
+          color="light"
+          onClick={() => void signIn("google", { callbackUrl: "/" })}
+        >
+          Sign in with Google
+        </Button>
+      </div>
+    );
+  }
+
+  if (variant === "noApiMatch") {
+    return (
+      <div className={`flex flex-col items-end gap-1 mt-1 ${className}`}>
+        <div className="w-full min-w-[200px] max-w-[260px] rounded border border-gray-200 dark:border-gray-700 p-2 text-left">
+          <p className="mb-1 text-[10px] text-gray-500 dark:text-gray-400">
+            No BPM from lookup — submit your measured tempo (e.g. from Tap BPM).
+          </p>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={suggestedTempo}
+            onChange={(e) => setSuggestedTempo(e.target.value)}
+            placeholder="Measured BPM"
+            className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-xs"
+          />
+          <button
+            type="button"
+            onClick={() => void submitSuggestion()}
+            disabled={
+              !apiPayload ||
+              !suggestedTempo.trim() ||
+              suggestionSubmitState === "sending"
+            }
+            className="mt-1 rounded bg-gray-100 dark:bg-gray-700 px-2 py-1 text-[10px] font-medium disabled:opacity-50"
+          >
+            {suggestionSubmitState === "sending" ? "Sending…" : "Submit measured BPM"}
+          </button>
+          {suggestionSubmitState === "sent" ? (
+            <p className="mt-1 text-[10px] text-green-600 dark:text-green-400">
+              Sent.
+            </p>
+          ) : null}
+          {suggestionSubmitState === "error" ? (
+            <p className="mt-1 text-[10px] text-red-600 dark:text-red-400">
+              Could not send. Try again.
+            </p>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex flex-col items-end gap-1 mt-1 ${className}`}>
