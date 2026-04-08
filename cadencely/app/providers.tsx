@@ -1,3 +1,5 @@
+'use client';
+
 import { createTheme } from "flowbite-react";
 
 export const customTheme = createTheme({
@@ -11,3 +13,4 @@ export const customTheme = createTheme({
     },
   },
 });
+
