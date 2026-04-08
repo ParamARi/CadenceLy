@@ -30,7 +30,8 @@ export type BpmFeedbackClientPayload = {
 export type BpmFeedbackPostBody = {
   rawTitle: string;
   videoId: string;
-  calculatedBpm: string;
+  /** Parsed from client `calculatedBpm` / `suggestedTempo` (0 < BPM ≤ 400). */
+  calculatedBpm: number;
   referenceBpm: number | null;
   parsedSong: string | null;
   parsedArtist: string | null;
@@ -89,7 +90,7 @@ export function buildBpmFeedbackUpstreamJson(
     userId: userId,
     rawTitle: body.rawTitle,
     videoId: body.videoId,
-    reportedTempo: body.calculatedBpm,
+    reportedTempo: String(body.calculatedBpm),
     parsedSong: nullIfEmpty(body.matchedSong ?? body.parsedSong ?? undefined),
     suggestedSong: nullIfEmpty(body.suggestedSong ?? undefined),
     parsedArtist: nullIfEmpty(body.matchedArtist ?? body.parsedArtist ?? undefined),

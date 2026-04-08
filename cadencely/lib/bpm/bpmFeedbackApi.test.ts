@@ -39,17 +39,17 @@ describe("buildBpmFeedbackUpstreamJson", () => {
       "user-1"
     );
     expect(upstream).toEqual({
-      user_id: "user-1",
-      raw_title: "t",
-      video_id: "vid",
-      calculated_bpm: 100,
-      parsed_song: "m",
-      usr_provided_song: "s",
-      parsed_artist: "ma",
-      usr_provided_artist: "sa",
-      artist_name: "an",
+      userId: "user-1",
+      rawTitle: "t",
+      videoId: "vid",
+      reportedTempo: "100",
+      parsedSong: "m",
+      suggestedSong: "s",
+      parsedArtist: "ma",
+      suggestedArtist: "sa",
+      artistName: "an",
     });
-    expect(upstream.reference_bpm).toBeUndefined();
+    expect(upstream.referencedBpm).toBeUndefined();
   });
 });
 

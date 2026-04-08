@@ -4,6 +4,12 @@
   "private": true,
   "description": "Cadence.ly - Search for songs and discover BPM information",
   "packageManager": "pnpm@9.12.2",
+  "pnpm": {
+    "overrides": {
+      "react": "19.2.4",
+      "react-dom": "19.2.4"
+    }
+  },
   "workspaces": [
     "cadencely"
   ],
