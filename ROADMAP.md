@@ -80,3 +80,13 @@ Add **Amazon Music** as a first-class source alongside today’s YouTube Music�
 - **Mapping to YouTube Music `videoId`:** Investigate and document a **practical bridge** when the app still needs a YouTube `videoId` (e.g., for embeds, tap-to-measure, or search fallbacks): likely **metadata-based matching** (title, primary artist, duration window, ISRC if available) rather than a guaranteed 1:1 ID map; define confidence tiers, user override (paste URL), and graceful degradation when no match is found.
 - **Compliance & program access:** Confirm **Amazon Music API / developer program** eligibility, rate limits, and terms before committing to UX promises; this epic may depend on approved partner access.
 
+### 8. Tempo clicker (audio metronome) for cadence matching
+
+Complement the **tap-to-measure** running flow with an **audible click track** locked to a chosen BPM so users can adjust tempo **up/down** until the clicks **feel in sync** with their stride—useful when tapping on a phone while moving is awkward.
+
+- **Playback:** Short **click or beep** on each beat via **Web Audio** (e.g., `AudioContext` + oscillator or buffered click), accurate scheduling ahead of time so timing stays stable on mobile.
+- **Controls:** **Play / pause**, **BPM display**, and **coarse/fine increment & decrement** (e.g., ±1 and ±5) within a sane cadence range (roughly walking through sprinting SPM).
+- **Discovery UX:** Optional **“This matches my run”** (or similar) that **sets the global tempo filter** using the same ±margin behavior as the running-tempo modal, or only copies the center BPM into the min/max fields for manual tweak.
+- **Mobile:** Respect **autoplay policies** (start only after a user gesture), handle **backgrounding** / tab sleep (pause or warn), and keep UI thumb-friendly next to the existing large tap targets.
+- **Accessibility:** Volume control, optional **visual pulse** on each beat, and respect **reduced motion** where relevant.
+

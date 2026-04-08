@@ -1,0 +1,50 @@
+
+> cadencely@1.0.0 build C:\Users\Param Ri\CadenceLy\CadenceLy\cadencely
+> next build
+
+   ▲ Next.js 15.5.12
+   - Environments: .env
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 11.9s
+   Skipping linting
+   Checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/8) ...
+   Generating static pages (2/8) 
+   Generating static pages (4/8) 
+   Generating static pages (6/8) 
+ ✓ Generating static pages (8/8)
+   Finalizing page optimization ...
+   Collecting build traces ...
+ ⚠ Failed to copy traced files for C:\Users\Param Ri\CadenceLy\CadenceLy\cadencely\.next\server\pages\_app.js [Error: EPERM: operation not permitted, symlink 'C:\Users\Param Ri\CadenceLy\CadenceLy\node_modules\.pnpm\react@19.2.4\node_modules\react' -> 'C:\Users\Param Ri\CadenceLy\CadenceLy\cadencely\.next\standalone\cadencely\node_modules\react'] {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'symlink',
+  path: 'C:\\Users\\Param Ri\\CadenceLy\\CadenceLy\\node_modules\\.pnpm\\react@19.2.4\\node_modules\\react',
+  dest: 'C:\\Users\\Param Ri\\CadenceLy\\CadenceLy\\cadencely\\.next\\standalone\\cadencely\\node_modules\\react'
+}
+ ⚠ Failed to copy traced files for C:\Users\Param Ri\CadenceLy\CadenceLy\cadencely\.next\server\pages\_error.js [Error: EPERM: operation not permitted, symlink 'C:\Users\Param Ri\CadenceLy\CadenceLy\node_modules\.pnpm\react@19.2.4\node_modules\react' -> 'C:\Users\Param Ri\CadenceLy\CadenceLy\cadencely\.next\standalone\node_modules\.pnpm\next@15.5.12_react-dom@19.2.4_react@19.2.4__react@19.2.4\node_modules\react'] {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'symlink',
+  path: 'C:\\Users\\Param Ri\\CadenceLy\\CadenceLy\\node_modules\\.pnpm\\react@19.2.4\\node_modules\\react',
+  dest: 'C:\\Users\\Param Ri\\CadenceLy\\CadenceLy\\cadencely\\.next\\standalone\\node_modules\\.pnpm\\next@15.5.12_react-dom@19.2.4_react@19.2.4__react@19.2.4\\node_modules\\react'
+}
+ ⚠ Failed to copy traced files for C:\Users\Param Ri\CadenceLy\CadenceLy\cadencely\.next\server\pages\_document.js [Error: EPERM: operation not permitted, symlink 'C:\Users\Param Ri\CadenceLy\CadenceLy\node_modules\.pnpm\client-only@0.0.1\node_modules\client-only' -> 'C:\Users\Param Ri\CadenceLy\CadenceLy\cadencely\.next\standalone\node_modules\.pnpm\styled-jsx@5.1.6_react@19.2.4\node_modules\client-only'] {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'symlink',
+  path: 'C:\\Users\\Param Ri\\CadenceLy\\CadenceLy\\node_modules\\.pnpm\\client-only@0.0.1\\node_modules\\client-only',
+  dest: 'C:\\Users\\Param Ri\\CadenceLy\\CadenceLy\\cadencely\\.next\\standalone\\node_modules\\.pnpm\\styled-jsx@5.1.6_react@19.2.4\\node_modules\\client-only'
+}
+
+> Build error occurred
+[Error: EPERM: operation not permitted, symlink 'C:\Users\Param Ri\CadenceLy\CadenceLy\node_modules\.pnpm\@swc+helpers@0.5.15\node_modules\@swc\helpers' -> 'C:\Users\Param Ri\CadenceLy\CadenceLy\cadencely\.next\standalone\node_modules\.pnpm\next@15.5.12_react-dom@19.2.4_react@19.2.4__react@19.2.4\node_modules\@swc\helpers'] {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'symlink',
+  path: 'C:\\Users\\Param Ri\\CadenceLy\\CadenceLy\\node_modules\\.pnpm\\@swc+helpers@0.5.15\\node_modules\\@swc\\helpers',
+  dest: 'C:\\Users\\Param Ri\\CadenceLy\\CadenceLy\\cadencely\\.next\\standalone\\node_modules\\.pnpm\\next@15.5.12_react-dom@19.2.4_react@19.2.4__react@19.2.4\\node_modules\\@swc\\helpers'
+}
+ ELIFECYCLE  Command failed with exit code 1.
