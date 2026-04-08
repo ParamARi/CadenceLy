@@ -10,6 +10,8 @@ export type SearchSettingsProps = {
   onApplyFilter: () => void;
   onClearFilter: () => void;
   isFilterApplied: boolean;
+  /** Opens the running-cadence helper (tap tempo → tempo filter ±5 BPM). */
+  onOpenRunningTempo?: () => void;
 };
 
 export default function SearchSettings({
@@ -21,6 +23,7 @@ export default function SearchSettings({
   onApplyFilter,
   onClearFilter,
   isFilterApplied,
+  onOpenRunningTempo,
 }: SearchSettingsProps) {
   return (
     <div className="flex flex-col gap-4 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 mt-4">
@@ -73,8 +76,18 @@ export default function SearchSettings({
         </div>
         
         {/* Tempo range */}
-        <div className="flex items-center gap-3 sm:pl-6 sm:border-l border-gray-200 dark:border-gray-700 w-full sm:w-auto justify-center sm:justify-start pt-4 sm:pt-0 border-t sm:border-t-0 mt-2 sm:mt-0">
-          <Label className="opacity-70">Tempo</Label>
+        <div className="flex flex-wrap items-center gap-3 sm:pl-6 sm:border-l border-gray-200 dark:border-gray-700 w-full sm:w-auto justify-center sm:justify-start pt-4 sm:pt-0 border-t sm:border-t-0 mt-2 sm:mt-0">
+          <Label className="opacity-70">Going for a run?</Label>
+          {onOpenRunningTempo ? (
+            <Button
+              size="xs"
+              color="light"
+              className="whitespace-nowrap"
+              onClick={onOpenRunningTempo}
+            >
+              Calculate tempo…
+            </Button>
+          ) : null}
           <div className="flex items-center gap-2">
             <TextInput
               type="number"

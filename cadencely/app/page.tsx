@@ -8,6 +8,7 @@ import SongResultsTable from "@/components/table/SongResultsTable";
 import ArtistResultsTable from "@/components/table/ArtistResultsTable";
 import PlaylistResultsTable from "@/components/table/PlaylistResultsTable";
 import SearchSettings from "./SearchSettings";
+import RunningTempoModal from "@/components/RunningTempoModal";
 import AppFooter from "@/components/AppFooter";
 import UserAuthControls from "@/components/UserAuthControls";
 import { filterByBpmRange } from "@/lib/filters";
@@ -34,6 +35,7 @@ export default function Home() {
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   /** Playlist mode: last search returned no loadable playlist (vs. initial empty state). */
   const [playlistHadNoMatch, setPlaylistHadNoMatch] = useState(false);
+  const [runningTempoOpen, setRunningTempoOpen] = useState(false);
 
   const handleApplyFilter = useCallback(() => {
     setIsFilterApplied(true);
@@ -53,6 +55,12 @@ export default function Home() {
     }
     // If user changes the inputs while filter is applied, maybe we un-apply it so they have to hit apply again, 
     // or just leave it applied and let it dynamically update. Let's leave it dynamically updating if applied.
+  }, []);
+
+  const handleApplyRunningTempoFilter = useCallback((min: number, max: number) => {
+    setMinBPM(min);
+    setMaxBPM(max);
+    setIsFilterApplied(true);
   }, []);
 
 
@@ -125,6 +133,13 @@ export default function Home() {
           onApplyFilter={handleApplyFilter}
           onClearFilter={handleClearFilter}
           isFilterApplied={isFilterApplied}
+          onOpenRunningTempo={() => setRunningTempoOpen(true)}
+        />
+
+        <RunningTempoModal
+          show={runningTempoOpen}
+          onClose={() => setRunningTempoOpen(false)}
+          onApplyFilterRange={handleApplyRunningTempoFilter}
         />
 
         <form

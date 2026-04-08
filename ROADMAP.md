@@ -60,3 +60,23 @@ When GetSongBPM (or other APIs) return no BPM, offer **in-browser** tempo estima
 4. Optional: on successful GetSongBPM responses, **POST** with `source: getsongbpm` to warm the cache.
 5. Optional: **GET** cache by `uri` / normalized keys when rendering results to reduce empty BPM cells.
 
+### 6. BPM “multiples” (perceived beat / meter)
+
+BPM databases and listeners often disagree on **which division of the pulse** counts as “the beat.” The same track might be labeled at half or double the tempo a runner hears (e.g., counting every other footfall vs. every footfall, or hearing four strong beats per bar vs. eight subdivisions). Let users opt into treating these as equivalent for search and filtering.
+
+- **User control:** A setting (toggle or preset) such as “Match half/double tempo” or “Include BPM multiples” so filtering and highlighting consider **×2** and **÷2** (and optionally **×4** / **÷4** where musically plausible) relative to the stored BPM and the user’s target range.
+- **Clarity in the UI:** When multiples are enabled, show **which interpretation** matched (e.g., “stored 88, matches your 176 cadence at double”) so users aren’t confused by numbers that differ from the raw API value.
+- **Scope:** Apply consistently to **song rows**, **expanded album/playlist tracks**, and **running tempo** / global min–max filter logic so one preference drives the whole session.
+- **Edge cases:** Cap sensible BPM bounds (avoid absurd multiples); document that very syncopated or compound-meter tracks may still feel “off” even when numerically aligned.
+
+### 7. Amazon Music integration (epic)
+
+Add **Amazon Music** as a first-class source alongside today’s YouTube Music–centric flows. Amazon exposes its own APIs and identity model; this milestone is intentionally large and may ship in phases.
+
+- **Platform selection:** Let users choose which catalog / playback context they are using (e.g., YouTube Music vs. Amazon Music) so search, library, and OAuth flows stay unambiguous.
+- **Sign-in:** **Login with Amazon** (or the appropriate Amazon Music / LWA flow required by their program) tied to the user’s Amazon account; secure token storage and refresh consistent with existing auth patterns.
+- **Library & playlists:** Query the user’s **saved playlists**, **library**, and related collections via the Amazon Music API; surface them in the UI with parity goals similar to OAuth milestone **1** (pull in lists, expand tracks, run BPM features where data allows).
+- **Backend & identifiers:** Extend the backend model to persist and pass through **Amazon Music track/album/playlist IDs** (and any stable ARNs or resource URIs their API returns) without conflating them with YouTube or internal IDs; versioning and migration strategy for any shared “universal track” table if introduced later.
+- **Mapping to YouTube Music `videoId`:** Investigate and document a **practical bridge** when the app still needs a YouTube `videoId` (e.g., for embeds, tap-to-measure, or search fallbacks): likely **metadata-based matching** (title, primary artist, duration window, ISRC if available) rather than a guaranteed 1:1 ID map; define confidence tiers, user override (paste URL), and graceful degradation when no match is found.
+- **Compliance & program access:** Confirm **Amazon Music API / developer program** eligibility, rate limits, and terms before committing to UX promises; this epic may depend on approved partner access.
+
