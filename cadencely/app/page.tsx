@@ -4,9 +4,9 @@ import { FormEvent, useCallback, useState } from "react";
 import { Button, TextInput, Alert, Spinner, Label } from "flowbite-react";
 import { HiSearch, HiInformationCircle } from "react-icons/hi";
 import type { ArtistSearchResult, SongSearchResult } from "@/lib/types";
-import SongResultsTable from "./SongResultsTable";
-import ArtistResultsTable from "./ArtistResultsTable";
-import PlaylistResultsTable from "./PlaylistResultsTable";
+import SongResultsTable from "@/components/table/SongResultsTable";
+import ArtistResultsTable from "@/components/table/ArtistResultsTable";
+import PlaylistResultsTable from "@/components/table/PlaylistResultsTable";
 import SearchSettings from "./SearchSettings";
 import AppFooter from "@/components/AppFooter";
 import UserAuthControls from "@/components/UserAuthControls";
@@ -114,7 +114,7 @@ export default function Home() {
           <UserAuthControls />
         </div>
         <h1 className="font-bitcount text-[7rem] sm:text-[8rem] font-extrabold text-center mb-10">
-          Cadence.ly
+          DJ-Cadence
         </h1>
         <SearchSettings 
           searchType={searchType} 

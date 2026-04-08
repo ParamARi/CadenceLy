@@ -1,4 +1,4 @@
-import type { BpmFeedbackPostBody } from "@/lib/bpm/bpmFeedbackApi";
+import type { BpmFeedbackClientPayload } from "@/lib/bpm/bpmFeedbackApi";
 
 export type TrackFeedbackSource = "artist" | "playlist";
 
@@ -45,25 +45,29 @@ type BuildPayloadInput = {
 
 /**
  * Factory for API bodies shared by artist-album and playlist track rows.
+ * Returns null when there is no `videoId` (required by the feedback API).
  */
 export function buildTrackFeedbackApiPayload(
   input: BuildPayloadInput
-): Omit<BpmFeedbackPostBody, "vote"> | null {
+): BpmFeedbackClientPayload | null {
   if (!input.showFeedback) return null;
 
-  const videoId = input.videoId || undefined;
+  const videoId = (input.videoId ?? "").trim();
+  if (!videoId) return null;
+
+  const rawTitle =
+    (input.rawTitle ?? "").trim() || `video:${videoId}`;
 
   if (input.showParsedFeedback) {
-    const reportedTempo =
-      input.tempo && input.tempo !== "-" ? input.tempo : "";
+    const calculatedBpm =
+      input.tempo && input.tempo !== "-" ? input.tempo.trim() : "";
+    const referenceBpm = calculatedBpm;
     if (input.source === "artist") {
       return {
-        source: "artist",
-        rowIndex: input.rowIndex,
-        rawTitle: input.rawTitle,
-        reportedTempo,
-        usedParsedFallback: input.usedParsedFallback,
+        rawTitle,
         videoId,
+        calculatedBpm,
+        referenceBpm,
         parsedSong: input.parsedSong,
         parsedArtist: input.parsedArtist,
         matchedSong: input.matchedSong,
@@ -72,28 +76,23 @@ export function buildTrackFeedbackApiPayload(
       };
     }
     return {
-      source: "playlist",
-      rowIndex: input.rowIndex,
-      rawTitle: input.rawTitle,
-      reportedTempo,
-      usedParsedFallback: input.usedParsedFallback,
+      rawTitle,
       videoId,
+      calculatedBpm,
+      referenceBpm,
       parsedSong: input.parsedSong,
       parsedArtist: input.parsedArtist,
       matchedSong: input.matchedSong,
       matchedArtist: input.matchedArtist,
-      playlistId: input.playlistId || undefined,
     };
   }
 
   if (input.source === "artist") {
     return {
-      source: "artist",
-      rowIndex: input.rowIndex,
-      rawTitle: input.rawTitle,
-      reportedTempo: "not found",
-      usedParsedFallback: false,
+      rawTitle,
       videoId,
+      calculatedBpm: "",
+      referenceBpm: "",
       parsedSong: null,
       parsedArtist: null,
       matchedSong: null,
@@ -103,16 +102,13 @@ export function buildTrackFeedbackApiPayload(
   }
 
   return {
-    source: "playlist",
-    rowIndex: input.rowIndex,
-    rawTitle: input.rawTitle,
-    reportedTempo: "not found",
-    usedParsedFallback: false,
+    rawTitle,
     videoId,
+    calculatedBpm: "",
+    referenceBpm: "",
     parsedSong: null,
     parsedArtist: null,
     matchedSong: null,
     matchedArtist: null,
-    playlistId: input.playlistId || undefined,
   };
 }

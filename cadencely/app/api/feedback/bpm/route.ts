@@ -2,8 +2,9 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import {
+  buildBpmFeedbackUpstreamJson,
   parseBpmFeedbackPostBody,
-  type BpmFeedbackPostBody,
+  type BpmFeedbackUpstreamJson,
 } from "@/lib/bpm/bpmFeedbackApi";
 import { getBpmFeedbackUpstreamUrl } from "@/lib/bpm/feedbackUpstream";
 
@@ -51,14 +52,22 @@ export async function POST(request: Request) {
     );
   }
 
-  const payload = {
-    ...parsed.body,
-    clientSentAt:
-      parsed.body.clientSentAt ?? new Date().toISOString(),
-    submittedByEmail: session.user.email ?? null,
-    submittedByName: session.user.name ?? null,
-    submittedBySub: session.user.id ?? null,
-  };
+  // console.log("parsed", parsed);
+
+  const userId = session.user.id?.trim();
+  if (!userId) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Signed-in user id is missing; cannot submit feedback.",
+      },
+      { status: 400 }
+    );
+  }
+
+  const upstreamBody = buildBpmFeedbackUpstreamJson(parsed.body, userId);
+
+  console.log("upstreamBody", upstreamBody);
 
   const upstreamUrl = getBpmFeedbackUpstreamUrl();
   if (upstreamUrl) {
@@ -68,7 +77,7 @@ export async function POST(request: Request) {
       const upstreamRes = await fetch(upstreamUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(upstreamBody),
         signal: ac.signal,
       });
       clearTimeout(t);
@@ -111,7 +120,10 @@ export async function POST(request: Request) {
   }
 
   const id = randomUUID();
-  logFeedbackStub(id, payload);
+  logFeedbackStub(id, upstreamBody, {
+    email: session.user.email ?? null,
+    clientSentAt: parsed.body.clientSentAt ?? new Date().toISOString(),
+  });
 
   return NextResponse.json(
     {
@@ -125,24 +137,12 @@ export async function POST(request: Request) {
 
 function logFeedbackStub(
   id: string,
-  body: BpmFeedbackPostBody & {
-    submittedByEmail?: string | null;
-    submittedByName?: string | null;
-    submittedBySub?: string | null;
-  }
+  upstream: BpmFeedbackUpstreamJson,
+  meta: { email: string | null; clientSentAt: string }
 ) {
   console.info("[api/feedback/bpm] stub", id, {
-    vote: body.vote,
-    source: body.source,
-    rowIndex: body.rowIndex,
-    reportedTempo: body.reportedTempo,
-    usedParsedFallback: body.usedParsedFallback,
-    playlistId: body.playlistId,
-    artistName: body.artistName,
-    videoId: body.videoId,
-    suggestedArtist: body.suggestedArtist,
-    suggestedSong: body.suggestedSong,
-    suggestedTempo: body.suggestedTempo,
-    submittedByEmail: body.submittedByEmail,
+    ...upstream,
+    submittedByEmail: meta.email,
+    clientSentAt: meta.clientSentAt,
   });
 }

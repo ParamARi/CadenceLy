@@ -1,4 +1,4 @@
-import type { BpmFeedbackPostBody } from "@/lib/bpm/bpmFeedbackApi";
+import type { BpmFeedbackClientPayload } from "@/lib/bpm/bpmFeedbackApi";
 
 export type SubmitBpmFeedbackResult =
   | { ok: true; status: number }
@@ -10,13 +10,14 @@ export type SubmitBpmFeedbackResult =
  * Failures are logged; localStorage still holds the vote from the caller.
  */
 export async function submitBpmFeedback(
-  body: BpmFeedbackPostBody
+  body: BpmFeedbackClientPayload
 ): Promise<SubmitBpmFeedbackResult> {
   try {
     const payload = {
       ...body,
       clientSentAt: body.clientSentAt ?? new Date().toISOString(),
     };
+    console.log("payload", payload);
     const res = await fetch("/api/feedback/bpm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

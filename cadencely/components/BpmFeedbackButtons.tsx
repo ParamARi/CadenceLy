@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { Button, Spinner } from "flowbite-react";
 import { LuThumbsUp, LuThumbsDown } from "react-icons/lu";
-import type { BpmFeedbackPostBody } from "@/lib/bpm/bpmFeedbackApi";
+import type { BpmFeedbackClientPayload } from "@/lib/bpm/bpmFeedbackApi";
 import type { BpmFeedbackVote } from "@/lib/bpm/bpmFeedbackStorage";
 import {
   getBpmFeedback,
@@ -25,7 +25,7 @@ type Props = {
   /** Optional external BPM value to prefill the suggested tempo input. */
   prefillSuggestedTempo?: string | null;
   /** When set, each vote change is POSTed to `/api/feedback/bpm` (fire-and-forget). */
-  apiPayload?: Omit<BpmFeedbackPostBody, "vote"> | null;
+  apiPayload?: BpmFeedbackClientPayload | null;
 };
 
 /**
@@ -71,7 +71,6 @@ export default function BpmFeedbackButtons({
       if (apiPayload && session) {
         void submitBpmFeedback({
           ...apiPayload,
-          vote: resolved,
           suggestedArtist: suggestedArtist.trim() || null,
           suggestedSong: suggestedSong.trim() || null,
           suggestedTempo: suggestedTempo.trim() || null,
@@ -102,10 +101,16 @@ export default function BpmFeedbackButtons({
     setSuggestionSubmitState("sending");
     const result = await submitBpmFeedback({
       ...apiPayload,
-      vote,
+      ...(variant === "noApiMatch"
+        ? {
+            calculatedBpm: suggestedTempo.trim(),
+            suggestedTempo: null,
+          }
+        : {
+            suggestedTempo: suggestedTempo.trim() || null,
+          }),
       suggestedArtist: suggestedArtist.trim() || null,
       suggestedSong: suggestedSong.trim() || null,
-      suggestedTempo: suggestedTempo.trim() || null,
     });
     setSuggestionSubmitState(result.ok ? "sent" : "error");
   }, [
@@ -114,7 +119,6 @@ export default function BpmFeedbackButtons({
     suggestedSong,
     suggestedTempo,
     variant,
-    vote,
     session,
   ]);
 
@@ -160,7 +164,7 @@ export default function BpmFeedbackButtons({
           </p>
           <input
             type="text"
-            inputMode="numeric"
+            inputMode="text"
             value={suggestedTempo}
             onChange={(e) => setSuggestedTempo(e.target.value)}
             placeholder="Measured BPM"

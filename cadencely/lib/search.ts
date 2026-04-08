@@ -93,7 +93,7 @@ export async function searchPlaylistsApi(
 
 /**
  * Search by album name; maps the first matching album into the same shape as an artist
- * with one album so it can be rendered with ArtistResultsTable.
+ * with one album so it can be rendered with `@/components/table/ArtistResultsTable`.
  */
 export async function searchAlbumByQueryApi(
   query: string

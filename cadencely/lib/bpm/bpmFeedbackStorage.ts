@@ -10,7 +10,7 @@ export function makeBpmFeedbackKey(input: {
   /** e.g. playlist id, or "artist" */
   scope: string;
   rawTitle: string;
-  reportedTempo: string;
+  reportedTempo: number;
   usedParsedFallback: boolean;
   parsedSong?: string | null;
   parsedArtist?: string | null;

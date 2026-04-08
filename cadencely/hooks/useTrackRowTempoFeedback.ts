@@ -7,7 +7,7 @@ import {
 } from "react";
 import { lookupTempoWithParsedTitleFallback } from "@/lib/bpm/lookupTempoWithParsedTitle";
 import { makeBpmFeedbackKey } from "@/lib/bpm/bpmFeedbackStorage";
-import type { BpmFeedbackPostBody } from "@/lib/bpm/bpmFeedbackApi";
+import type { BpmFeedbackClientPayload } from "@/lib/bpm/bpmFeedbackApi";
 import {
   buildTrackFeedbackApiPayload,
   createTrackFeedbackScope,
@@ -181,7 +181,7 @@ export function useTrackRowTempoFeedback({
       makeBpmFeedbackKey({
         scope: feedbackScope,
         rawTitle,
-        reportedTempo: tempo && tempo !== "-" ? tempo : "",
+        reportedTempo: parseInt(tempo || "0", 10),
         usedParsedFallback,
         parsedSong,
         parsedArtist,
@@ -195,7 +195,7 @@ export function useTrackRowTempoFeedback({
   const showFeedback = showParsedFeedback || showNoMatchFeedback;
 
   const feedbackApiPayload = useMemo(():
-    | Omit<BpmFeedbackPostBody, "vote">
+    | BpmFeedbackClientPayload
     | null => {
     return buildTrackFeedbackApiPayload({
       source,

@@ -33,7 +33,7 @@ function TrackRow({
   maxBPM?: number;
   onOpenTapBpm: (session: TapBpmSession) => void;
 }) {
-  const rawTitle = song.name.trim();
+  const rawTitle = String(song.name ?? song.title ?? "").trim();
   const videoId =
     typeof song.videoId === "string" && song.videoId ? song.videoId : "";
 
@@ -60,8 +60,14 @@ function TrackRow({
     maxBPM,
     videoId,
     artistContextName: artistName,
-    lookupEffectDeps: [song.name, artistName],
+    lookupEffectDeps: [song.name, song.title, artistName],
   });
+
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+
+  const toggleFeedbackForm = () => {
+    setShowFeedbackForm(!showFeedbackForm);
+  };
 
   return (
     <TableRow className={`bg-white dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all ${isOutOfRange ? 'opacity-30 grayscale' : ''}`}>
@@ -69,8 +75,8 @@ function TrackRow({
         {sIdx + 1}.
       </TableCell>
       <TableCell className="font-medium text-gray-900 dark:text-white px-2 py-3 max-w-[260px]">
-        <span className="truncate block" title={song.name}>
-          {song.name}
+        <span className="truncate block" title={song.name ?? song.title}>
+          {song.name ?? song.title ?? "—"}
         </span>
       </TableCell>
       <ParsedGetSongTableCell
@@ -86,12 +92,13 @@ function TrackRow({
             size="xs"
             color="light"
             onClick={() =>
-              onOpenTapBpm({
-                title: song.name,
+              [onOpenTapBpm({
+                title: String(song.name ?? song.title ?? "").trim() || "Track",
                 artistName,
                 videoId: videoId || undefined,
                 onUseMeasuredBpm: onMeasuredBpmFromTap,
-              })
+              }),
+              setShowFeedbackForm(true)]
             }
           >
             Tap BPM
@@ -109,15 +116,18 @@ function TrackRow({
               {tempo} BPM
             </Badge>
           ) : (
-            <span className="opacity-50 text-xs italic">Not Found</span>
+            <Button className="opacity-50 text-xs italic"
+            onClick={toggleFeedbackForm}>Not Found</Button>
           )}
-          <BpmFeedbackButtons
-            storageKey={feedbackKey}
-            visible={showFeedback}
-            variant={showNoMatchFeedback ? "noApiMatch" : "parsedMatch"}
-            prefillSuggestedTempo={prefillSuggestedTempo}
-            apiPayload={feedbackApiPayload}
-          />
+          {showFeedbackForm && (
+            <BpmFeedbackButtons
+              storageKey={feedbackKey}
+              visible={showFeedback}
+              variant={showNoMatchFeedback ? "noApiMatch" : "parsedMatch"}
+              prefillSuggestedTempo={prefillSuggestedTempo}
+              apiPayload={feedbackApiPayload}
+            />
+          )}
         </div>
       </TableCell>
     </TableRow>
@@ -222,7 +232,6 @@ const albumColumns = [
           size="xs"
           pill
           className="border-none hover:bg-gray-100 dark:hover:bg-gray-700"
-          onClick={row.getToggleExpandedHandler()}
         >
           {row.getIsExpanded() ? (
             <HiChevronUp className="h-5 w-5" />
@@ -264,7 +273,6 @@ const albumColumns = [
         <Button
           color={isExpanded ? "dark" : "light"}
           size="sm"
-          onClick={info.row.getToggleExpandedHandler()}
         >
           {isExpanded ? "Close Tracklist" : "View Tracklist"}
         </Button>

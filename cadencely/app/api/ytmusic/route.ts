@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import YTMusic from "ytmusic-api";
+import { getCachedAlbumById } from "@/lib/ytmusicAlbum";
 
 async function fetchArtist(ytmusic: any, query: string) {
   // 1. Search for the artist
@@ -8,6 +9,7 @@ async function fetchArtist(ytmusic: any, query: string) {
     return null;
   }
 
+  //TODO: Add a way for users to select which artist they want to use if there are multiple results.
   const artistId = searchResults[0].artistId;
 
   // 2. Get the artist details (which includes their albums)
@@ -37,14 +39,7 @@ async function fetchArtist(ytmusic: any, query: string) {
   };
 }
 
-async function fetchAlbum(ytmusic: any, query: string, albumId?: string | null) {
-  if (albumId) {
-    const albumDetail = await ytmusic.getAlbum(albumId);
-    return {
-      album: albumDetail,
-    };
-  }
-
+async function fetchAlbum(ytmusic: any, query: string) {
   const searchResults = await ytmusic.searchAlbums(query);
   if (!searchResults || searchResults.length === 0) {
     return null;
@@ -182,6 +177,19 @@ export async function GET(request: Request) {
     }
   }
 
+  if (type === "album" && albumId) {
+    try {
+      const albumDetail = await getCachedAlbumById(albumId);
+      return NextResponse.json({ album: albumDetail }, { status: 200 });
+    } catch (error) {
+      console.error("Error fetching from ytmusic-api:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch data from YouTube Music" },
+        { status: 500 }
+      );
+    }
+  }
+
   if (!combinedQuery.trim() && !albumId) {
     return NextResponse.json(
       { error: "query or albumId parameter is required" },
@@ -198,7 +206,7 @@ export async function GET(request: Request) {
     if (type === "artist") {
       data = await fetchArtist(ytmusic, combinedQuery || "");
     } else if (type === "album") {
-      data = await fetchAlbum(ytmusic, combinedQuery || "", albumId);
+      data = await fetchAlbum(ytmusic, combinedQuery || "");
     } else if (type === "playlist") {
       data = await fetchPlaylist(ytmusic, combinedQuery || "");
     } else {

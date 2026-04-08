@@ -1,32 +1,59 @@
 /**
- * BPM thumbs feedback — shared types + server-side JSON validation.
- * POST handler will later persist to Postgres; for now only validates and acknowledges.
+ * BPM feedback — client JSON (camelCase) → validation → upstream body (snake_case).
  */
 
-export type BpmFeedbackSource = "playlist" | "artist";
-
-export type BpmFeedbackPostBody = {
-  /** User cleared the vote, or explicit thumbs */
-  vote: "up" | "down" | null;
-  source: BpmFeedbackSource;
-  /** 0-based index in the current table */
-  rowIndex: number;
+/** JSON body the browser POSTs to `/api/feedback/bpm`. */
+export type BpmFeedbackClientPayload = {
   rawTitle: string;
-  /** BPM string as shown in the UI, e.g. "128" */
-  reportedTempo: string;
-  usedParsedFallback: boolean;
-  videoId?: string | null;
+  /** Required for persistence (YouTube / track id). */
+  videoId: string;
+  /**
+   * Displayed or user-entered BPM text. Parsed to `calculated_bpm` (exclusive 0, up to 400 inclusive).
+   * May be empty when `suggestedTempo` holds the measured value (no-API match flow).
+   */
+  calculatedBpm: string;
+  /** If non-empty and parses in range, sent as optional `reference_bpm`. */
+  referenceBpm?: string;
+  /** Fallback numeric source when `calculatedBpm` is empty or not parseable. */
+  suggestedTempo?: string | null;
   parsedSong?: string | null;
   parsedArtist?: string | null;
   matchedSong?: string | null;
   matchedArtist?: string | null;
   suggestedSong?: string | null;
   suggestedArtist?: string | null;
-  suggestedTempo?: string | null;
-  playlistId?: string | null;
   artistName?: string | null;
-  /** Optional ISO timestamp from the client for future dedup / ordering */
   clientSentAt?: string;
+};
+
+/** Normalized row after `parseBpmFeedbackPostBody`. */
+export type BpmFeedbackPostBody = {
+  rawTitle: string;
+  videoId: string;
+  calculatedBpm: string;
+  referenceBpm: number | null;
+  parsedSong: string | null;
+  parsedArtist: string | null;
+  matchedSong: string | null;
+  matchedArtist: string | null;
+  suggestedSong: string | null;
+  suggestedArtist: string | null;
+  artistName: string | null;
+  clientSentAt?: string;
+};
+
+/** Body forwarded to Express / Postgres (snake_case). */
+export type BpmFeedbackUpstreamJson = {
+  userId: string;
+  rawTitle: string;
+  videoId: string;
+  reportedTempo: string;
+  parsedSong: string | null;
+  suggestedSong: string | null;
+  parsedArtist: string | null;
+  suggestedArtist: string | null;
+  artistName: string | null;
+  referencedBpm?: number;
 };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -37,15 +64,45 @@ function asString(v: unknown): string | undefined {
   return typeof v === "string" ? v : undefined;
 }
 
-function asBool(v: unknown): boolean | undefined {
-  return typeof v === "boolean" ? v : undefined;
+function nullIfEmpty(s: string | null | undefined): string | null {
+  if (s == null) return null;
+  const t = s.trim();
+  return t === "" ? null : t;
 }
 
-function asInt(v: unknown): number | undefined {
-  if (typeof v === "number" && Number.isInteger(v)) return v;
-  if (typeof v === "string" && v.trim() !== "" && Number.isInteger(Number(v)))
-    return Number(v);
-  return undefined;
+/** BPM must be greater than 0 and at most 400. */
+export function parseBpmInRange(v: unknown): number | null {
+  if (v == null) return null;
+  const raw = typeof v === "string" ? v.trim() : String(v);
+  if (raw === "" || /^not\s*found$/i.test(raw)) return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return null;
+  if (n <= 0 || n > 400) return null;
+  return n;
+}
+
+export function buildBpmFeedbackUpstreamJson(
+  body: BpmFeedbackPostBody,
+  userId: string
+): BpmFeedbackUpstreamJson {
+  const out: BpmFeedbackUpstreamJson = {
+    userId: userId,
+    rawTitle: body.rawTitle,
+    videoId: body.videoId,
+    reportedTempo: body.calculatedBpm,
+    parsedSong: nullIfEmpty(body.matchedSong ?? body.parsedSong ?? undefined),
+    suggestedSong: nullIfEmpty(body.suggestedSong ?? undefined),
+    parsedArtist: nullIfEmpty(body.matchedArtist ?? body.parsedArtist ?? undefined),
+    suggestedArtist: nullIfEmpty(body.suggestedArtist ?? undefined),
+    artistName: nullIfEmpty(body.artistName ?? undefined),
+  };
+  if (
+    body.referenceBpm != null &&
+    body.referenceBpm !== body.calculatedBpm
+  ) {
+    out.referencedBpm = body.referenceBpm;
+  }
+  return out;
 }
 
 export function parseBpmFeedbackPostBody(
@@ -55,65 +112,60 @@ export function parseBpmFeedbackPostBody(
     return { ok: false, message: "Body must be a JSON object" };
   }
 
-  const voteRaw = input.vote;
-  const vote =
-    voteRaw === null || voteRaw === "up" || voteRaw === "down"
-      ? voteRaw
-      : undefined;
-  if (vote === undefined) {
-    return { ok: false, message: "vote must be \"up\", \"down\", or null" };
-  }
-
-  const source = input.source;
-  if (source !== "playlist" && source !== "artist") {
-    return { ok: false, message: "source must be \"playlist\" or \"artist\"" };
-  }
-
   const rawTitle = asString(input.rawTitle)?.trim() ?? "";
   if (!rawTitle) {
     return { ok: false, message: "rawTitle is required" };
   }
 
-  const reportedTempo = asString(input.reportedTempo)?.trim() ?? "";
-  if (!reportedTempo) {
-    return { ok: false, message: "reportedTempo is required" };
+  const videoId = asString(input.videoId)?.trim() ?? "";
+  if (!videoId) {
+    return { ok: false, message: "videoId is required" };
   }
 
-  const usedParsedFallback = asBool(input.usedParsedFallback);
-  if (usedParsedFallback === undefined) {
-    return { ok: false, message: "usedParsedFallback must be a boolean" };
+  const fromCalc = parseBpmInRange(input.calculatedBpm);
+  const fromSuggested = parseBpmInRange(input.suggestedTempo);
+  const calculatedBpm = fromCalc ?? fromSuggested;
+  if (calculatedBpm == null) {
+    return {
+      ok: false,
+      message:
+        "calculatedBpm (or suggestedTempo) must be a number with 0 < BPM ≤ 400",
+    };
   }
 
-  const rowIndex = asInt(input.rowIndex);
-  if (rowIndex === undefined || rowIndex < 0) {
-    return { ok: false, message: "rowIndex must be a non-negative integer" };
+  let referenceBpm: number | null = null;
+  const refRaw = input.referenceBpm;
+  if (refRaw !== null && refRaw !== undefined && refRaw !== "") {
+    const ref = parseBpmInRange(refRaw);
+    if (ref == null) {
+      return {
+        ok: false,
+        message: "referenceBpm must be a number with 0 < BPM ≤ 400 when set",
+      };
+    }
+    referenceBpm = ref;
   }
 
   const body: BpmFeedbackPostBody = {
-    vote,
-    source,
-    rowIndex,
     rawTitle,
-    reportedTempo,
-    usedParsedFallback,
-    videoId: input.videoId === null ? null : asString(input.videoId),
-    parsedSong: input.parsedSong === null ? null : asString(input.parsedSong),
+    videoId,
+    calculatedBpm,
+    referenceBpm,
+    parsedSong: input.parsedSong === null ? null : nullIfEmpty(asString(input.parsedSong)),
     parsedArtist:
-      input.parsedArtist === null ? null : asString(input.parsedArtist),
+      input.parsedArtist === null ? null : nullIfEmpty(asString(input.parsedArtist)),
     matchedSong:
-      input.matchedSong === null ? null : asString(input.matchedSong),
+      input.matchedSong === null ? null : nullIfEmpty(asString(input.matchedSong)),
     matchedArtist:
-      input.matchedArtist === null ? null : asString(input.matchedArtist),
+      input.matchedArtist === null ? null : nullIfEmpty(asString(input.matchedArtist)),
     suggestedSong:
-      input.suggestedSong === null ? null : asString(input.suggestedSong),
+      input.suggestedSong === null ? null : nullIfEmpty(asString(input.suggestedSong)),
     suggestedArtist:
-      input.suggestedArtist === null ? null : asString(input.suggestedArtist),
-    suggestedTempo:
-      input.suggestedTempo === null ? null : asString(input.suggestedTempo),
-    playlistId:
-      input.playlistId === null ? null : asString(input.playlistId),
+      input.suggestedArtist === null
+        ? null
+        : nullIfEmpty(asString(input.suggestedArtist)),
     artistName:
-      input.artistName === null ? null : asString(input.artistName),
+      input.artistName === null ? null : nullIfEmpty(asString(input.artistName)),
     clientSentAt: asString(input.clientSentAt),
   };
 
