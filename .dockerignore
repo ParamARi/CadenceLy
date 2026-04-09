@@ -2,6 +2,9 @@ Dockerfile
 .dockerignore
 node_modules
 cadencely/node_modules
+# pnpm: avoid Windows pack errors (broken symlinks / MAX_PATH) when `az acr build` tars the context
+**/.pnpm
+**/node_modules
 cadencely/npm-debug.log
 README.md
 cadencely/.next

@@ -33,6 +33,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local-only CLI deploy notes (not committed)
+LOCAL_DEPLOY_CLI.txt
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
