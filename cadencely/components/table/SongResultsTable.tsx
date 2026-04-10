@@ -12,6 +12,14 @@ import {
   createColumnHelper,
 } from "@tanstack/react-table";
 import { Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Progress, Spinner, Button } from "flowbite-react";
+import { cn } from "@/lib/utils";
+
+type SongTableColMeta = { headClassName?: string; cellClassName?: string };
+
+const SONG_DESKTOP_COL_META: SongTableColMeta = {
+  headClassName: "hidden sm:table-cell",
+  cellClassName: "hidden sm:table-cell align-top",
+};
 function SongParsedGetSongCell({
   title,
   artistName,
@@ -91,20 +99,86 @@ export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
 
   const songColumns = useMemo(
     () => [
+      columnHelper.display({
+        id: "mobileSummary",
+        header: "Track",
+        meta: {
+          headClassName: "sm:hidden align-top",
+          cellClassName: "sm:hidden align-top p-2",
+        } satisfies SongTableColMeta,
+        cell: (info) => {
+          const row = info.row.original;
+          const title = row.title;
+          const artistName = row.artist.name;
+          const songLookupQuery = `${artistName} ${title}`.trim();
+          const bpm = parseFloat(row.tempo);
+          const score = row.danceability * 100;
+          const key = row.key_of || "-";
+          return (
+            <div className="flex min-w-0 max-w-full flex-col gap-2 text-xs">
+              <div className="min-w-0">
+                <div className="font-semibold leading-snug text-gray-900 dark:text-white">
+                  {title}
+                </div>
+                <div className="mt-0.5 truncate text-[11px] text-gray-500 dark:text-gray-400">
+                  {row.album.title}
+                </div>
+                <div className="mt-0.5 truncate text-[11px] text-gray-600 dark:text-gray-300">
+                  {artistName}
+                </div>
+              </div>
+              <div className="min-w-0 max-w-full border-t border-gray-100 pt-2 dark:border-gray-600/80 [&_div]:!max-w-none">
+                <SongParsedGetSongCell title={title} artistName={artistName} />
+              </div>
+              <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-2 dark:border-gray-600/80">
+                <Button
+                  size="xs"
+                  color="light"
+                  className="touch-manipulation"
+                  onClick={() =>
+                    openTapBpm({
+                      title,
+                      artistName,
+                      songLookupQuery,
+                    })
+                  }
+                >
+                  Tap BPM
+                </Button>
+                {isNaN(bpm) ? (
+                  <span className="text-[11px] italic text-gray-400">No BPM</span>
+                ) : (
+                  <Badge color="indigo" size="sm" className="w-fit font-mono text-[11px]">
+                    {Math.round(bpm)} BPM
+                  </Badge>
+                )}
+                <Badge color="gray" size="sm" className="w-fit font-mono text-[11px]">
+                  {key}
+                </Badge>
+                <span className="font-mono text-[11px] text-gray-500">
+                  Vibe {Math.round(Math.max(0, Math.min(100, score)))}%
+                </span>
+              </div>
+            </div>
+          );
+        },
+      }),
       columnHelper.accessor("title", {
+        meta: SONG_DESKTOP_COL_META,
         header: "Song",
         cell: (info) => (
           <div className="flex flex-col">
             <span className="font-semibold text-base text-gray-900 dark:text-white">
               {info.getValue()}
             </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-[200px] sm:max-w-[300px]">
+            <span className="mt-0.5 max-w-[200px] truncate text-xs text-gray-500 dark:text-gray-400 sm:max-w-[300px]">
               {info.row.original.album.title}
             </span>
           </div>
         ),
       }),
       columnHelper.accessor("artist.name", {
+        meta: SONG_DESKTOP_COL_META,
         header: "Artist",
         cell: (info) => (
           <span className="font-medium text-gray-700 dark:text-gray-300">
@@ -114,6 +188,7 @@ export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
       }),
       columnHelper.display({
         id: "parsedGetSong",
+        meta: SONG_DESKTOP_COL_META,
         header: "Parsed (GetSong)",
         cell: (info) => (
           <SongParsedGetSongCell
@@ -124,6 +199,7 @@ export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
       }),
       columnHelper.display({
         id: "tapBpm",
+        meta: SONG_DESKTOP_COL_META,
         header: "Tap BPM",
         cell: (info) => {
           const title = info.row.original.title;
@@ -149,11 +225,12 @@ export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
         },
       }),
       columnHelper.accessor("tempo", {
+        meta: SONG_DESKTOP_COL_META,
         header: "BPM",
         cell: (info) => {
           const bpm = parseFloat(info.getValue());
           return isNaN(bpm) ? (
-            <span className="opacity-50 text-xs italic">Not Found</span>
+            <span className="text-xs italic opacity-50">Not Found</span>
           ) : (
             <Badge color="indigo" size="sm" className="w-fit font-mono">
               {Math.round(bpm)} BPM
@@ -162,6 +239,7 @@ export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
         },
       }),
       columnHelper.accessor("key_of", {
+        meta: SONG_DESKTOP_COL_META,
         header: "Key",
         cell: (info) => {
           const key = info.getValue() || "-";
@@ -173,18 +251,19 @@ export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
         },
       }),
       columnHelper.accessor("danceability", {
+        meta: SONG_DESKTOP_COL_META,
         header: "Vibe",
         cell: (info) => {
           const score = info.getValue() * 100;
           return (
-            <div className="flex items-center gap-3 min-w-[100px]">
+            <div className="flex min-w-[100px] items-center gap-3">
               <Progress
                 progress={Math.max(0, Math.min(100, score))}
                 color="purple"
                 size="sm"
                 className="flex-1"
               />
-              <span className="text-xs font-mono text-gray-500 w-8 text-right">
+              <span className="w-8 text-right font-mono text-xs text-gray-500">
                 {Math.round(score)}%
               </span>
             </div>
@@ -220,12 +299,18 @@ export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
     <>
     <div className="my-8 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
       <div className="overflow-x-auto">
-        <Table hoverable>
+        <Table hoverable className="w-full max-sm:text-xs sm:text-sm">
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHeadCell key={header.id}>
+                  <TableHeadCell
+                    key={header.id}
+                    className={cn(
+                      (header.column.columnDef.meta as SongTableColMeta | undefined)
+                        ?.headClassName
+                    )}
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -241,7 +326,13 @@ export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
             {table.getRowModel().rows.map((row) => (
               <TableRow key={row.id} className="bg-white dark:bg-gray-800 dark:border-gray-700">
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                  <TableCell
+                    key={cell.id}
+                    className={cn(
+                      (cell.column.columnDef.meta as SongTableColMeta | undefined)
+                        ?.cellClassName
+                    )}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}

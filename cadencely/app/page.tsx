@@ -121,7 +121,7 @@ export default function Home() {
         <div className="mb-4 flex justify-end">
           <UserAuthControls />
         </div>
-        <h1 className="font-bitcount text-[7rem] sm:text-[8rem] font-extrabold text-center mb-10">
+        <h1 className="font-bitcount text-[clamp(2rem,12vw+0.75rem,8rem)] font-extrabold text-center mb-6 sm:mb-10 leading-none tracking-tight">
           DJ-Cadence
         </h1>
         <SearchSettings 
@@ -144,9 +144,9 @@ export default function Home() {
 
         <form
           onSubmit={handleSearch}
-          className="mt-6 mb-4 px-0 justify-center items-center"
+          className="mt-6 mb-4 justify-center items-center px-0"
         >
-          <div className="flex w-8/9 self-center gap-2 px-4 sm:px-0">
+          <div className="flex w-full max-sm:flex-col max-sm:gap-3 self-center gap-2 px-4 sm:px-0">
             <TextInput
               id="search"
               type="text"
@@ -155,13 +155,14 @@ export default function Home() {
               required
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="flex-1"
+              className="min-w-0 flex-1 max-sm:[&_input]:min-h-11 max-sm:[&_input]:text-base touch-manipulation"
               sizing="lg"
             />
             <Button
               type="submit"
               disabled={isSearching}
               size="lg"
+              className="max-sm:min-h-11 max-sm:w-full max-sm:justify-center shrink-0 touch-manipulation"
             >
               {isSearching ? <Spinner size="sm" light={true} className="mr-2" /> : null}
               {isSearching ? "Searching..." : "Search"}

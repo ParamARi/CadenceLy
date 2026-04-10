@@ -1,5 +1,6 @@
 import { useMemo, Fragment, useState, useEffect } from "react";
 import type { ArtistSearchResult, ArtistAlbum } from "@/lib/types";
+import { ParsedGetSongBody } from "@/components/results/ParsedGetSongBody";
 import { ParsedGetSongTableCell } from "@/components/results/ParsedGetSongTableCell";
 import { TapBpmModalRoot } from "@/components/results/TapBpmModalRoot";
 import { useTapBpmSession } from "@/hooks/useTapBpmSession";
@@ -15,6 +16,7 @@ import {
 import { searchAlbumsApi } from "@/lib/search";
 import BpmFeedbackButtons from "@/components/BpmFeedbackButtons";
 import { Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Button, Card } from "flowbite-react";
+import { cn } from "@/lib/utils";
 import { HiChevronDown, HiChevronUp } from "react-icons/hi";
 import type { TapBpmSession } from "@/components/TapBpmModal";
 
@@ -69,68 +71,139 @@ function TrackRow({
     setShowFeedbackForm(!showFeedbackForm);
   };
 
+  const rowTone = `bg-white dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all ${
+    isOutOfRange ? "opacity-30 grayscale" : ""
+  }`;
+
+  const openTap = () => {
+    onOpenTapBpm({
+      title: String(song.name ?? song.title ?? "").trim() || "Track",
+      artistName,
+      videoId: videoId || undefined,
+      onUseMeasuredBpm: onMeasuredBpmFromTap,
+    });
+    setShowFeedbackForm(true);
+  };
+
   return (
-    <TableRow className={`bg-white dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all ${isOutOfRange ? 'opacity-30 grayscale' : ''}`}>
-      <TableCell className="w-10 opacity-50 font-mono text-xs text-right px-2 py-3">
-        {sIdx + 1}.
-      </TableCell>
-      <TableCell className="font-medium text-gray-900 dark:text-white px-2 py-3 max-w-[260px]">
-        <span className="truncate block" title={song.name ?? song.title}>
-          {song.name ?? song.title ?? "—"}
-        </span>
-      </TableCell>
-      <ParsedGetSongTableCell
-        parsedArtist={parsedArtist}
-        parsedSong={parsedSong}
-        matchedArtist={matchedArtist}
-        matchedSong={matchedSong}
-        loading={loading}
-      />
-      <TableCell className="px-2 py-3 whitespace-nowrap">
-        {videoId ? (
-          <Button
-            size="xs"
-            color="light"
-            onClick={() =>
-              [onOpenTapBpm({
-                title: String(song.name ?? song.title ?? "").trim() || "Track",
-                artistName,
-                videoId: videoId || undefined,
-                onUseMeasuredBpm: onMeasuredBpmFromTap,
-              }),
-              setShowFeedbackForm(true)]
-            }
-          >
-            Tap BPM
-          </Button>
-        ) : (
-          <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
-        )}
-      </TableCell>
-      <TableCell className="px-2 py-3 text-right align-top">
-        <div className="flex flex-col items-end gap-0">
-          {loading ? (
-            <Spinner size="sm" />
-          ) : tempo && tempo !== "-" ? (
-            <Badge color="indigo" size="sm" className="w-fit inline-flex font-mono">
-              {tempo} BPM
-            </Badge>
+    <Fragment>
+      <TableRow className={`${rowTone} sm:hidden`}>
+        <TableCell colSpan={5} className="p-2 align-top">
+          <div className="flex min-w-0 flex-col gap-2 text-xs">
+            <div className="flex min-w-0 gap-2">
+              <span className="w-5 shrink-0 text-right font-mono text-[10px] text-gray-400">
+                {sIdx + 1}.
+              </span>
+              <div className="min-w-0 flex-1 font-medium text-gray-900 dark:text-white">
+                <span className="block truncate" title={song.name ?? song.title}>
+                  {song.name ?? song.title ?? "—"}
+                </span>
+              </div>
+            </div>
+            <div className="min-w-0 border-t border-gray-100 pt-2 dark:border-gray-600/80 [&_div]:!max-w-none">
+              {loading ? (
+                <Spinner size="sm" />
+              ) : (
+                <ParsedGetSongBody
+                  parsedArtist={parsedArtist}
+                  parsedSong={parsedSong}
+                  matchedArtist={matchedArtist}
+                  matchedSong={matchedSong}
+                />
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-2 dark:border-gray-600/80">
+              {videoId ? (
+                <Button size="xs" color="light" className="touch-manipulation" onClick={openTap}>
+                  Tap BPM
+                </Button>
+              ) : (
+                <span className="text-[11px] text-gray-400 dark:text-gray-500">—</span>
+              )}
+              {loading ? null : tempo && tempo !== "-" ? (
+                <Badge
+                  color="indigo"
+                  size="sm"
+                  className="inline-flex w-fit font-mono text-[11px]"
+                >
+                  {tempo} BPM
+                </Badge>
+              ) : (
+                <Button
+                  size="xs"
+                  color="light"
+                  className="text-[11px] italic opacity-80"
+                  onClick={toggleFeedbackForm}
+                >
+                  Not Found
+                </Button>
+              )}
+            </div>
+            {showFeedbackForm ? (
+              <div className="border-t border-gray-100 pt-2 dark:border-gray-600/80">
+                <BpmFeedbackButtons
+                  storageKey={feedbackKey}
+                  visible={showFeedback}
+                  variant={showNoMatchFeedback ? "noApiMatch" : "parsedMatch"}
+                  prefillSuggestedTempo={prefillSuggestedTempo}
+                  apiPayload={feedbackApiPayload}
+                />
+              </div>
+            ) : null}
+          </div>
+        </TableCell>
+      </TableRow>
+      <TableRow className={`${rowTone} hidden sm:table-row`}>
+        <TableCell className="w-10 px-2 py-3 text-right font-mono text-xs opacity-50">
+          {sIdx + 1}.
+        </TableCell>
+        <TableCell className="max-w-[260px] px-2 py-3 font-medium text-gray-900 dark:text-white">
+          <span className="block truncate" title={song.name ?? song.title}>
+            {song.name ?? song.title ?? "—"}
+          </span>
+        </TableCell>
+        <ParsedGetSongTableCell
+          parsedArtist={parsedArtist}
+          parsedSong={parsedSong}
+          matchedArtist={matchedArtist}
+          matchedSong={matchedSong}
+          loading={loading}
+        />
+        <TableCell className="whitespace-nowrap px-2 py-3">
+          {videoId ? (
+            <Button size="xs" color="light" onClick={openTap}>
+              Tap BPM
+            </Button>
           ) : (
-            <Button className="opacity-50 text-xs italic"
-            onClick={toggleFeedbackForm}>Not Found</Button>
+            <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
           )}
-          {showFeedbackForm && (
-            <BpmFeedbackButtons
-              storageKey={feedbackKey}
-              visible={showFeedback}
-              variant={showNoMatchFeedback ? "noApiMatch" : "parsedMatch"}
-              prefillSuggestedTempo={prefillSuggestedTempo}
-              apiPayload={feedbackApiPayload}
-            />
-          )}
-        </div>
-      </TableCell>
-    </TableRow>
+        </TableCell>
+        <TableCell className="px-2 py-3 text-right align-top">
+          <div className="flex flex-col items-end gap-0">
+            {loading ? (
+              <Spinner size="sm" />
+            ) : tempo && tempo !== "-" ? (
+              <Badge color="indigo" size="sm" className="inline-flex w-fit font-mono">
+                {tempo} BPM
+              </Badge>
+            ) : (
+              <Button className="text-xs italic opacity-50" onClick={toggleFeedbackForm}>
+                Not Found
+              </Button>
+            )}
+            {showFeedbackForm ? (
+              <BpmFeedbackButtons
+                storageKey={feedbackKey}
+                visible={showFeedback}
+                variant={showNoMatchFeedback ? "noApiMatch" : "parsedMatch"}
+                prefillSuggestedTempo={prefillSuggestedTempo}
+                apiPayload={feedbackApiPayload}
+              />
+            ) : null}
+          </div>
+        </TableCell>
+      </TableRow>
+    </Fragment>
   );
 }
 
@@ -183,9 +256,14 @@ function ExpandedAlbumRow({
           </div>
         ) : (
           <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-            <Table hoverable className="w-full text-sm text-left">
+            <Table hoverable className="w-full text-left max-sm:text-xs sm:text-sm">
               <TableHead>
-                <TableRow className="bg-gray-50 dark:bg-gray-700/50">
+                <TableRow className="bg-gray-50 dark:bg-gray-700/50 sm:hidden">
+                  <TableHeadCell colSpan={5} className="px-2 py-2 text-xs font-semibold">
+                    Track
+                  </TableHeadCell>
+                </TableRow>
+                <TableRow className="hidden bg-gray-50 dark:bg-gray-700/50 sm:table-row">
                   <TableHeadCell className="w-10 px-2 py-2 text-right font-semibold">#</TableHeadCell>
                   <TableHeadCell className="px-2 py-2 font-semibold">Track</TableHeadCell>
                   <TableHeadCell className="px-2 py-2 font-semibold">Parsed (GetSong)</TableHeadCell>
@@ -219,11 +297,95 @@ function ExpandedAlbumRow({
   );
 }
 
+type AlbumTableColMeta = { headClassName?: string; cellClassName?: string };
+
+const ALBUM_DESKTOP_COL_META: AlbumTableColMeta = {
+  headClassName: "hidden sm:table-cell whitespace-nowrap",
+  cellClassName: "hidden sm:table-cell align-top whitespace-nowrap",
+};
+
 const albumColumnHelper = createColumnHelper<ArtistAlbum & { artistName: string }>();
 
 const albumColumns = [
   albumColumnHelper.display({
+    id: "albumMobile",
+    header: "Album",
+    meta: {
+      headClassName: "sm:hidden",
+      cellClassName: "sm:hidden align-top p-2",
+    } satisfies AlbumTableColMeta,
+    cell: ({ row }) => {
+      const isExpanded = row.getIsExpanded();
+      const album = row.original;
+      return (
+        <div className="flex min-w-0 items-start gap-2">
+          <Button
+            color="gray"
+            size="xs"
+            pill
+            className="mt-0.5 shrink-0 border-none hover:bg-gray-100 dark:hover:bg-gray-700"
+            onClick={(e) => {
+              e.stopPropagation();
+              row.toggleExpanded();
+            }}
+          >
+            {isExpanded ? (
+              <HiChevronUp className="h-4 w-4" />
+            ) : (
+              <HiChevronDown className="h-4 w-4" />
+            )}
+          </Button>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-gray-200 bg-gray-100 dark:border-gray-600 dark:bg-gray-700">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="opacity-60 text-gray-500 dark:text-gray-400"
+                >
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold leading-tight text-gray-900 dark:text-white">
+                  {album.title}
+                </div>
+                <div className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                  {album.artistName}
+                </div>
+              </div>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Badge color="gray" size="sm" className="w-fit font-mono text-[11px]">
+                {album.year || "-"}
+              </Badge>
+              <Button
+                size="xs"
+                color={isExpanded ? "dark" : "light"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  row.toggleExpanded();
+                }}
+              >
+                {isExpanded ? "Close" : "View tracklist"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    },
+  }),
+  albumColumnHelper.display({
     id: "expander",
+    meta: ALBUM_DESKTOP_COL_META,
     header: () => null,
     cell: ({ row }) => {
       return row.getCanExpand() ? (
@@ -243,20 +405,22 @@ const albumColumns = [
     },
   }),
   albumColumnHelper.accessor("title", {
+    meta: ALBUM_DESKTOP_COL_META,
     header: "Album",
     cell: (info) => (
       <div className="flex items-center gap-3">
-        <div className="h-10 w-10 flex-shrink-0 rounded bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 flex items-center justify-center">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded border border-gray-200 bg-gray-100 dark:border-gray-600 dark:bg-gray-700">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-60 text-gray-500 dark:text-gray-400"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
         </div>
         <div className="flex flex-col">
-          <span className="font-semibold text-base text-gray-900 dark:text-white">{info.getValue()}</span>
-          <span className="text-xs opacity-60 mt-0.5 text-gray-500 dark:text-gray-400">{info.row.original.artistName}</span>
+          <span className="text-base font-semibold text-gray-900 dark:text-white">{info.getValue()}</span>
+          <span className="mt-0.5 text-xs text-gray-500 opacity-60 dark:text-gray-400">{info.row.original.artistName}</span>
         </div>
       </div>
     ),
   }),
   albumColumnHelper.accessor("year", {
+    meta: ALBUM_DESKTOP_COL_META,
     header: "Year",
     cell: (info) => (
       <Badge color="gray" size="sm" className="w-fit font-mono">
@@ -266,6 +430,7 @@ const albumColumns = [
   }),
   albumColumnHelper.display({
     id: "tracks",
+    meta: ALBUM_DESKTOP_COL_META,
     header: "Action",
     cell: (info) => {
       const isExpanded = info.row.getIsExpanded();
@@ -334,9 +499,14 @@ function SingleAlbumTracklist({
           <span className="text-sm font-medium opacity-70 animate-pulse text-gray-900 dark:text-white">Loading tracks...</span>
         </div>
       ) : (
-        <Table hoverable className="w-full text-sm text-left">
+        <Table hoverable className="w-full text-left max-sm:text-xs sm:text-sm">
           <TableHead>
-            <TableRow className="bg-gray-50 dark:bg-gray-700/50">
+            <TableRow className="bg-gray-50 dark:bg-gray-700/50 sm:hidden">
+              <TableHeadCell colSpan={5} className="px-2 py-2 text-xs font-semibold">
+                Track
+              </TableHeadCell>
+            </TableRow>
+            <TableRow className="hidden bg-gray-50 dark:bg-gray-700/50 sm:table-row">
               <TableHeadCell className="w-10 px-2 py-2 text-right font-semibold">#</TableHeadCell>
               <TableHeadCell className="px-2 py-2 font-semibold">Track</TableHeadCell>
               <TableHeadCell className="px-2 py-2 font-semibold">Parsed (GetSong)</TableHeadCell>
@@ -431,12 +601,18 @@ export default function ArtistResultsTable({ results, minBPM, maxBPM }: Props) {
     <>
     <div className="my-8 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
       <div className="overflow-x-auto">
-        <Table hoverable className="w-full text-sm text-left">
+        <Table hoverable className="w-full text-left max-sm:text-xs sm:text-sm">
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHeadCell key={header.id} className="whitespace-nowrap">
+                  <TableHeadCell
+                    key={header.id}
+                    className={cn(
+                      (header.column.columnDef.meta as AlbumTableColMeta | undefined)
+                        ?.headClassName
+                    )}
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -458,7 +634,13 @@ export default function ArtistResultsTable({ results, minBPM, maxBPM }: Props) {
                   onClick={row.getToggleExpandedHandler()}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="whitespace-nowrap">
+                    <TableCell
+                      key={cell.id}
+                      className={cn(
+                        (cell.column.columnDef.meta as AlbumTableColMeta | undefined)
+                          ?.cellClassName
+                      )}
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()

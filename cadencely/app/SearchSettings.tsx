@@ -28,8 +28,8 @@ export default function SearchSettings({
   return (
     <div className="flex flex-col gap-4 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 mt-4">
       {/* Search type radios */}
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-6 w-full">
-        <div className="flex gap-6">
+      <div className="flex min-w-0 w-full flex-col sm:flex-row items-center justify-center gap-6">
+        <div className="flex gap-6 max-sm:min-w-0 max-sm:w-full max-sm:max-w-full max-sm:flex-wrap max-sm:justify-center max-sm:gap-x-5 max-sm:gap-y-3">
           <div className="flex items-center gap-2">
             <Radio
               id="type-song"

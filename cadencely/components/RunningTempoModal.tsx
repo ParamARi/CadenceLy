@@ -62,13 +62,26 @@ export default function RunningTempoModal({
       }}
     >
       <ModalHeader className="shrink-0">
-        <span className="block font-semibold">Running tempo</span>
-        <span className="mt-1 block text-sm font-normal text-gray-500 dark:text-gray-400">
+        <span className="block text-base font-semibold sm:text-lg">Running tempo</span>
+        <span className="mt-1 block text-xs font-normal text-gray-500 dark:text-gray-400 sm:text-sm">
           Tap in rhythm with your steps (cadence). Choose how wide the tempo
           filter should be on each side (±BPM), then apply.
         </span>
       </ModalHeader>
       <ModalBody className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain">
+        <button
+          type="button"
+          onClick={registerTap}
+          className="flex min-h-[min(44dvh,17.5rem)] w-full shrink-0 touch-manipulation select-none flex-col items-center justify-center gap-1 rounded-2xl border-[3px] border-emerald-500/80 bg-emerald-50/90 px-5 py-8 text-center text-emerald-950 transition hover:bg-emerald-100/90 active:scale-[0.99] active:bg-emerald-200/80 dark:border-emerald-500 dark:bg-emerald-950/50 dark:text-emerald-50 dark:hover:bg-emerald-900/60 dark:active:bg-emerald-900/80 sm:min-h-[10.5rem] sm:gap-0.5 sm:rounded-xl sm:border-2 sm:px-4 sm:py-6"
+        >
+          <span className="text-lg font-semibold leading-tight sm:text-xl">
+            Tap here with your footfalls
+          </span>
+          <span className="mt-1 max-w-[20rem] text-sm opacity-80 sm:mt-0.5 sm:text-base">
+            Or press Space (when not typing in a field)
+          </span>
+        </button>
+        
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-gray-200 bg-gray-50/90 p-3 dark:border-gray-600 dark:bg-gray-900/50">
           <Label
             htmlFor="running-tempo-margin"
@@ -89,19 +102,6 @@ export default function RunningTempoModal({
             ))}
           </select>
         </div>
-
-        <button
-          type="button"
-          onClick={registerTap}
-          className="flex min-h-[min(44dvh,17.5rem)] w-full shrink-0 touch-manipulation select-none flex-col items-center justify-center gap-1 rounded-2xl border-[3px] border-emerald-500/80 bg-emerald-50/90 px-5 py-8 text-center text-emerald-950 transition hover:bg-emerald-100/90 active:scale-[0.99] active:bg-emerald-200/80 dark:border-emerald-500 dark:bg-emerald-950/50 dark:text-emerald-50 dark:hover:bg-emerald-900/60 dark:active:bg-emerald-900/80 sm:min-h-[10.5rem] sm:gap-0.5 sm:rounded-xl sm:border-2 sm:px-4 sm:py-6"
-        >
-          <span className="text-lg font-semibold leading-tight sm:text-xl">
-            Tap here with your footfalls
-          </span>
-          <span className="mt-1 max-w-[20rem] text-sm opacity-80 sm:mt-0.5 sm:text-base">
-            Or press Space (when not typing in a field)
-          </span>
-        </button>
 
         <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-6 gap-y-2">
           <div className="text-center">
