@@ -43,25 +43,33 @@ export default function BpmFeedbackButtons({
   const [vote, setVote] = useState<BpmFeedbackVote | null>(null);
   const [suggestedArtist, setSuggestedArtist] = useState("");
   const [suggestedSong, setSuggestedSong] = useState("");
-  const [suggestedTempo, setSuggestedTempo] = useState("");
+  const [suggestedTempo, setSuggestedTempo] = useState<number | null>(null);
   const [suggestionSubmitState, setSuggestionSubmitState] = useState<
     "idle" | "sending" | "sent" | "error"
   >("idle");
+  const parseTempoInput = useCallback((value: string): number | null => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+  }, []);
+  const suggestedTempoText =
+    suggestedTempo == null ? "" : String(suggestedTempo);
 
   useEffect(() => {
     setVote(getBpmFeedback(storageKey));
     setSuggestedArtist("");
     setSuggestedSong("");
-    setSuggestedTempo("");
+    setSuggestedTempo(null);
     setSuggestionSubmitState("idle");
   }, [storageKey]);
 
   useEffect(() => {
     const next = prefillSuggestedTempo?.trim();
     if (!next) return;
-    setSuggestedTempo(next);
+    setSuggestedTempo(parseTempoInput(next));
     setSuggestionSubmitState("idle");
-  }, [prefillSuggestedTempo]);
+  }, [prefillSuggestedTempo, parseTempoInput]);
 
   const toggle = useCallback(
     (next: BpmFeedbackVote) => {
@@ -73,7 +81,7 @@ export default function BpmFeedbackButtons({
           ...apiPayload,
           suggestedArtist: suggestedArtist.trim() || null,
           suggestedSong: suggestedSong.trim() || null,
-          suggestedTempo: suggestedTempo.trim() || null,
+          suggestedTempo: suggestedTempo == null ? null : String(suggestedTempo),
         });
       }
     },
@@ -92,7 +100,7 @@ export default function BpmFeedbackButtons({
     if (!apiPayload || !session) return;
     const hasArtistOrSong =
       Boolean(suggestedArtist.trim()) || Boolean(suggestedSong.trim());
-    const hasTempo = Boolean(suggestedTempo.trim());
+    const hasTempo = suggestedTempo != null;
     if (variant === "noApiMatch") {
       if (!hasTempo) return;
     } else if (!hasArtistOrSong) {
@@ -103,11 +111,12 @@ export default function BpmFeedbackButtons({
       ...apiPayload,
       ...(variant === "noApiMatch"
         ? {
-            calculatedBpm: suggestedTempo.trim(),
+            calculatedBpm: suggestedTempo == null ? "" : suggestedTempo,
             suggestedTempo: null,
           }
         : {
-            suggestedTempo: suggestedTempo.trim() || null,
+            suggestedTempo:
+              suggestedTempo == null ? null : suggestedTempo,
           }),
       suggestedArtist: suggestedArtist.trim() || null,
       suggestedSong: suggestedSong.trim() || null,
@@ -163,10 +172,10 @@ export default function BpmFeedbackButtons({
             No BPM from lookup — submit your measured tempo (e.g. from Tap BPM).
           </p>
           <input
-            type="text"
-            inputMode="text"
-            value={suggestedTempo}
-            onChange={(e) => setSuggestedTempo(e.target.value)}
+            type="number"
+            inputMode="numeric"
+            value={suggestedTempoText}
+            onChange={(e) => setSuggestedTempo(parseTempoInput(e.target.value))}
             placeholder="Measured BPM"
             className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-xs"
           />
@@ -175,7 +184,7 @@ export default function BpmFeedbackButtons({
             onClick={() => void submitSuggestion()}
             disabled={
               !apiPayload ||
-              !suggestedTempo.trim() ||
+              suggestedTempo == null ||
               suggestionSubmitState === "sending"
             }
             className="mt-1 rounded bg-gray-100 dark:bg-gray-700 px-2 py-1 text-[10px] font-medium disabled:opacity-50"
@@ -247,9 +256,10 @@ export default function BpmFeedbackButtons({
             className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-xs"
           />
           <input
-            type="text"
-            value={suggestedTempo}
-            onChange={(e) => setSuggestedTempo(e.target.value)}
+            type="number"
+            inputMode="numeric"
+            value={suggestedTempoText}
+            onChange={(e) => setSuggestedTempo(parseTempoInput(e.target.value))}
             placeholder="Correct tempo"
             className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-xs"
           />

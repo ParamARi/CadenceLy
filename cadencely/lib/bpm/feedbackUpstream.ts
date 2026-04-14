@@ -6,7 +6,7 @@
  *   `http://localhost:3005/api/feedback/bpm`.
  * - In **production**, if unset, Next uses the local stub only (201 + log).
  */
-const DEV_DEFAULT_UPSTREAM = "http://localhost:3005/api/feedback/bpm";
+const DEV_DEFAULT_UPSTREAM = process.env.FEEDBACK_API_URL?.trim() || null;
 
 export function getBpmFeedbackUpstreamUrl(): string | null {
   const fromEnv = process.env.FEEDBACK_API_URL?.trim();

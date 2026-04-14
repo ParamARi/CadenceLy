@@ -15,7 +15,7 @@ export type BpmFeedbackClientPayload = {
   /** If non-empty and parses in range, sent as optional `reference_bpm`. */
   referenceBpm?: string;
   /** Fallback numeric source when `calculatedBpm` is empty or not parseable. */
-  suggestedTempo?: string | null;
+  suggestedTempo: number | null;
   parsedSong?: string | null;
   parsedArtist?: string | null;
   matchedSong?: string | null;
@@ -48,7 +48,7 @@ export type BpmFeedbackUpstreamJson = {
   userId: string;
   rawTitle: string;
   videoId: string;
-  reportedTempo: string;
+  reportedTempo: number;
   parsedSong: string | null;
   suggestedSong: string | null;
   parsedArtist: string | null;
@@ -90,7 +90,7 @@ export function buildBpmFeedbackUpstreamJson(
     userId: userId,
     rawTitle: body.rawTitle,
     videoId: body.videoId,
-    reportedTempo: String(body.calculatedBpm),
+    reportedTempo: body.calculatedBpm,
     parsedSong: nullIfEmpty(body.matchedSong ?? body.parsedSong ?? undefined),
     suggestedSong: nullIfEmpty(body.suggestedSong ?? undefined),
     parsedArtist: nullIfEmpty(body.matchedArtist ?? body.parsedArtist ?? undefined),
