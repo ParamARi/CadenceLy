@@ -19,10 +19,12 @@ import { Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRo
 import { cn } from "@/lib/utils";
 import { HiChevronDown, HiChevronUp } from "react-icons/hi";
 import type { TapBpmSession } from "@/components/TapBpmModal";
+import { PlaylistQueueCheckbox } from "@/components/playlist/PlaylistQueueCheckbox";
 
 function TrackRow({
   song,
   sIdx,
+  albumId,
   artistName,
   minBPM,
   maxBPM,
@@ -30,6 +32,9 @@ function TrackRow({
 }: {
   song: any;
   sIdx: number;
+  /** YTMusic album browse id — scopes BPM feedback like playlist rows. */
+  albumId: string;
+  /** Listing artist (fallback when the track has no per-track artist). */
   artistName: string;
   minBPM?: number;
   maxBPM?: number;
@@ -38,6 +43,11 @@ function TrackRow({
   const rawTitle = String(song.name ?? song.title ?? "").trim();
   const videoId =
     typeof song.videoId === "string" && song.videoId ? song.videoId : "";
+  const trackArtist =
+    typeof song.artist?.name === "string" ? song.artist.name.trim() : "";
+  const displayArtist = trackArtist || artistName;
+  const queueResolve =
+    videoId ? undefined : `${displayArtist} ${rawTitle}`.trim() || undefined;
 
   const {
     tempo,
@@ -54,15 +64,15 @@ function TrackRow({
     showNoMatchFeedback,
     feedbackApiPayload,
   } = useTrackRowTempoFeedback({
-    mode: "artist",
+    mode: "album",
     rowIndex: sIdx,
     rawTitle,
-    lookupArtistName: artistName,
+    lookupArtistName: displayArtist,
     minBPM,
     maxBPM,
     videoId,
-    artistContextName: artistName,
-    lookupEffectDeps: [song.name, song.title, artistName],
+    albumId,
+    lookupEffectDeps: [song.name, song.title, trackArtist, artistName],
   });
 
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
@@ -78,7 +88,7 @@ function TrackRow({
   const openTap = () => {
     onOpenTapBpm({
       title: String(song.name ?? song.title ?? "").trim() || "Track",
-      artistName,
+      artistName: displayArtist,
       videoId: videoId || undefined,
       onUseMeasuredBpm: onMeasuredBpmFromTap,
     });
@@ -88,7 +98,7 @@ function TrackRow({
   return (
     <Fragment>
       <TableRow className={`${rowTone} sm:hidden`}>
-        <TableCell colSpan={5} className="p-2 align-top">
+        <TableCell colSpan={6} className="p-2 align-top">
           <div className="flex min-w-0 flex-col gap-2 text-xs">
             <div className="flex min-w-0 gap-2">
               <span className="w-5 shrink-0 text-right font-mono text-[10px] text-gray-400">
@@ -99,6 +109,12 @@ function TrackRow({
                   {song.name ?? song.title ?? "—"}
                 </span>
               </div>
+              <PlaylistQueueCheckbox
+                videoId={videoId}
+                resolveQuery={queueResolve}
+                title={rawTitle || "Track"}
+                subtitle={displayArtist}
+              />
             </div>
             <div className="min-w-0 border-t border-gray-100 pt-2 dark:border-gray-600/80 [&_div]:!max-w-none">
               {loading ? (
@@ -202,6 +218,14 @@ function TrackRow({
             ) : null}
           </div>
         </TableCell>
+        <TableCell className="px-2 py-3 text-center align-middle">
+          <PlaylistQueueCheckbox
+            videoId={videoId}
+            resolveQuery={queueResolve}
+            title={rawTitle || "Track"}
+            subtitle={displayArtist}
+          />
+        </TableCell>
       </TableRow>
     </Fragment>
   );
@@ -259,7 +283,7 @@ function ExpandedAlbumRow({
             <Table hoverable className="w-full text-left max-sm:text-xs sm:text-sm">
               <TableHead>
                 <TableRow className="bg-gray-50 dark:bg-gray-700/50 sm:hidden">
-                  <TableHeadCell colSpan={5} className="px-2 py-2 text-xs font-semibold">
+                  <TableHeadCell colSpan={6} className="px-2 py-2 text-xs font-semibold">
                     Track
                   </TableHeadCell>
                 </TableRow>
@@ -269,6 +293,7 @@ function ExpandedAlbumRow({
                   <TableHeadCell className="px-2 py-2 font-semibold">Parsed (GetSong)</TableHeadCell>
                   <TableHeadCell className="px-2 py-2 font-semibold">Tap BPM</TableHeadCell>
                   <TableHeadCell className="px-2 py-2 text-right font-semibold">BPM</TableHeadCell>
+                  <TableHeadCell className="w-12 px-2 py-2 text-center font-semibold">Queue</TableHeadCell>
                 </TableRow>
               </TableHead>
               <TableBody className="divide-y">
@@ -277,6 +302,7 @@ function ExpandedAlbumRow({
                     key={sIdx}
                     song={song}
                     sIdx={sIdx}
+                    albumId={albumId}
                     artistName={artistName}
                     minBPM={minBPM}
                     maxBPM={maxBPM}
@@ -285,7 +311,7 @@ function ExpandedAlbumRow({
                 ))}
                 {songs.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-sm opacity-50 italic py-4 text-center">No tracks found for this album.</TableCell>
+                    <TableCell colSpan={6} className="text-sm opacity-50 italic py-4 text-center">No tracks found for this album.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -502,7 +528,7 @@ function SingleAlbumTracklist({
         <Table hoverable className="w-full text-left max-sm:text-xs sm:text-sm">
           <TableHead>
             <TableRow className="bg-gray-50 dark:bg-gray-700/50 sm:hidden">
-              <TableHeadCell colSpan={5} className="px-2 py-2 text-xs font-semibold">
+              <TableHeadCell colSpan={6} className="px-2 py-2 text-xs font-semibold">
                 Track
               </TableHeadCell>
             </TableRow>
@@ -512,6 +538,7 @@ function SingleAlbumTracklist({
               <TableHeadCell className="px-2 py-2 font-semibold">Parsed (GetSong)</TableHeadCell>
               <TableHeadCell className="px-2 py-2 font-semibold">Tap BPM</TableHeadCell>
               <TableHeadCell className="px-2 py-2 text-right font-semibold">BPM</TableHeadCell>
+              <TableHeadCell className="w-12 px-2 py-2 text-center font-semibold">Queue</TableHeadCell>
             </TableRow>
           </TableHead>
           <TableBody className="divide-y">
@@ -520,6 +547,7 @@ function SingleAlbumTracklist({
                 key={sIdx}
                 song={song}
                 sIdx={sIdx}
+                albumId={album.uri}
                 artistName={artistName}
                 minBPM={minBPM}
                 maxBPM={maxBPM}
@@ -528,7 +556,7 @@ function SingleAlbumTracklist({
             ))}
             {songs.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-sm opacity-50 italic text-center py-4 text-gray-900 dark:text-white">No tracks found for this album.</TableCell>
+                <TableCell colSpan={6} className="text-sm opacity-50 italic text-center py-4 text-gray-900 dark:text-white">No tracks found for this album.</TableCell>
               </TableRow>
             )}
           </TableBody>

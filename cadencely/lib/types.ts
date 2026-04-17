@@ -1,3 +1,29 @@
+/** Thumbnail entry as returned on YTMusic-style video objects. */
+export type SongThumbnail = {
+  url: string;
+  width: number;
+  height: number;
+};
+
+/** Channel / artist block on a catalog video item. */
+export type SongVideoArtist = {
+  name: string;
+  artistId: string;
+};
+
+/**
+ * Single video track shape (e.g. from playlist browse APIs).
+ * @example `{ "type": "VIDEO", "videoId": "…", "name": "…", "artist": { … }, "duration": 226, "thumbnails": [ … ] }`
+ */
+export type Song = {
+  type: string;
+  videoId: string;
+  name: string;
+  artist: SongVideoArtist;
+  duration: number;
+  thumbnails: SongThumbnail[];
+};
+
 export type SongArtist = {
   id: string;
   name: string;
@@ -56,5 +82,5 @@ export type PlaylistSearchResult = {
   title?: string;
   author?: string;
   count?: number;
-  songs?: any[];
+  songs?: Song[];
 };

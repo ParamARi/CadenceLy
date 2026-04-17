@@ -13,6 +13,7 @@ import {
 } from "@tanstack/react-table";
 import { Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Progress, Spinner, Button } from "flowbite-react";
 import { cn } from "@/lib/utils";
+import { PlaylistQueueCheckbox } from "@/components/playlist/PlaylistQueueCheckbox";
 
 type SongTableColMeta = { headClassName?: string; cellClassName?: string };
 
@@ -116,7 +117,8 @@ export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
           const key = row.key_of || "-";
           return (
             <div className="flex min-w-0 max-w-full flex-col gap-2 text-xs">
-              <div className="min-w-0">
+              <div className="flex min-w-0 gap-2">
+                <div className="min-w-0 flex-1">
                 <div className="font-semibold leading-snug text-gray-900 dark:text-white">
                   {title}
                 </div>
@@ -126,6 +128,13 @@ export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
                 <div className="mt-0.5 truncate text-[11px] text-gray-600 dark:text-gray-300">
                   {artistName}
                 </div>
+                </div>
+                <PlaylistQueueCheckbox
+                  uri={row.uri}
+                  resolveQuery={songLookupQuery}
+                  title={title}
+                  subtitle={artistName}
+                />
               </div>
               <div className="min-w-0 max-w-full border-t border-gray-100 pt-2 dark:border-gray-600/80 [&_div]:!max-w-none">
                 <SongParsedGetSongCell title={title} artistName={artistName} />
@@ -267,6 +276,24 @@ export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
                 {Math.round(score)}%
               </span>
             </div>
+          );
+        },
+      }),
+      columnHelper.display({
+        id: "playlistQueue",
+        meta: SONG_DESKTOP_COL_META,
+        header: "Queue",
+        cell: (info) => {
+          const row = info.row.original;
+          const title = row.title;
+          const artistName = row.artist.name;
+          return (
+            <PlaylistQueueCheckbox
+              uri={row.uri}
+              resolveQuery={`${artistName} ${title}`.trim()}
+              title={title}
+              subtitle={artistName}
+            />
           );
         },
       }),

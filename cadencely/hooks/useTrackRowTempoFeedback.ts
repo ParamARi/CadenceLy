@@ -6,6 +6,11 @@ import {
   type DependencyList,
 } from "react";
 import { lookupTempoWithParsedTitleFallback } from "@/lib/bpm/lookupTempoWithParsedTitle";
+import {
+  getTempoLookupFromSessionCache,
+  setTempoLookupSessionCache,
+  tempoLookupCacheKey,
+} from "@/lib/bpm/tempoLookupSessionCache";
 import { makeBpmFeedbackKey } from "@/lib/bpm/bpmFeedbackStorage";
 import type { BpmFeedbackClientPayload } from "@/lib/bpm/bpmFeedbackApi";
 import {
@@ -14,19 +19,22 @@ import {
   type TrackFeedbackSource,
 } from "@/lib/resultsTable/trackFeedbackPayloadFactory";
 
-export type TrackRowTempoMode = "artist" | "playlist";
+export type TrackRowTempoMode = "artist" | "playlist" | "album";
 
 type UseTrackRowTempoFeedbackArgs = {
   mode: TrackRowTempoMode;
   rowIndex: number;
   rawTitle: string;
-  lookupArtistName: string;
+  /** When omitted, tempo lookup uses title-only matching (empty artist string). */
+  lookupArtistName?: string;
   minBPM?: number;
   maxBPM?: number;
   videoId: string;
   /** Artist table: API `artistName` / scope */
   artistContextName?: string;
   playlistId?: string;
+  /** Album expanded tracklist: YTMusic album id for feedback scope (same behavior as playlist). */
+  albumId?: string;
   /** Dependency list for the lookup effect (e.g. [song.name, artistName]) */
   lookupEffectDeps: DependencyList;
 };
@@ -80,7 +88,8 @@ function applyLookupResult(
 }
 
 /**
- * Tempo lookup + BPM feedback key/payload for artist-album and playlist track rows.
+ * Tempo lookup + BPM feedback for artist, album, and playlist track rows
+ * (shared `tempoLookupSessionCache` by videoId / title|artist).
  */
 export function useTrackRowTempoFeedback({
   mode,
@@ -92,8 +101,11 @@ export function useTrackRowTempoFeedback({
   videoId,
   artistContextName,
   playlistId,
+  albumId,
   lookupEffectDeps,
 }: UseTrackRowTempoFeedbackArgs) {
+  const lookupArtist = lookupArtistName ?? "";
+
   const [tempo, setTempo] = useState<string | null>(null);
   const [usedParsedFallback, setUsedParsedFallback] = useState(false);
   const [parsedArtist, setParsedArtist] = useState<string | null>(null);
@@ -106,14 +118,34 @@ export function useTrackRowTempoFeedback({
   );
 
   useEffect(() => {
+    const cacheKey = tempoLookupCacheKey({
+      videoId,
+      rawTitle: rawTitle.trim(),
+      artistName: lookupArtist,
+    });
+    const cached = getTempoLookupFromSessionCache(cacheKey);
+    if (cached) {
+      applyLookupResult(mode, cached, {
+        setTempo,
+        setUsedParsedFallback,
+        setParsedArtist,
+        setParsedSong,
+        setMatchedSong,
+        setMatchedArtist,
+      });
+      setLoading(false);
+      return;
+    }
+
     let isMounted = true;
     async function fetchTempo() {
       setLoading(true);
       try {
         const result = await lookupTempoWithParsedTitleFallback({
           rawTitle: rawTitle.trim(),
-          artistName: lookupArtistName,
+          artistName: lookupArtist,
         });
+        setTempoLookupSessionCache(cacheKey, result);
         if (isMounted) {
           applyLookupResult(mode, result, {
             setTempo,
@@ -144,7 +176,7 @@ export function useTrackRowTempoFeedback({
     return () => {
       isMounted = false;
     };
-  }, [mode, rawTitle, lookupArtistName, ...lookupEffectDeps]);
+  }, [mode, rawTitle, lookupArtist, videoId, ...lookupEffectDeps]);
 
   const isOutOfRange = useMemo(() => {
     if (!tempo || tempo === "-") return false;
@@ -155,7 +187,12 @@ export function useTrackRowTempoFeedback({
     return false;
   }, [tempo, minBPM, maxBPM]);
 
-  const source: TrackFeedbackSource = mode === "artist" ? "artist" : "playlist";
+  const source: TrackFeedbackSource =
+    mode === "artist"
+      ? "artist"
+      : mode === "playlist"
+        ? "playlist"
+        : "album";
 
   const feedbackScope = useMemo(
     () =>
@@ -165,6 +202,7 @@ export function useTrackRowTempoFeedback({
         videoId,
         artistContextName,
         playlistId,
+        albumId,
       }),
     [
       source,
@@ -173,6 +211,7 @@ export function useTrackRowTempoFeedback({
       videoId,
       artistContextName,
       playlistId,
+      albumId,
     ]
   );
 

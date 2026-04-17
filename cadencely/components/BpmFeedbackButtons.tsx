@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { Button, Spinner } from "flowbite-react";
 import { LuThumbsUp, LuThumbsDown } from "react-icons/lu";
-import type { BpmFeedbackClientPayload } from "@/lib/bpm/bpmFeedbackApi";
+import {
+  parseBpmInRange,
+  type BpmFeedbackClientPayload,
+} from "@/lib/bpm/bpmFeedbackApi";
 import type { BpmFeedbackVote } from "@/lib/bpm/bpmFeedbackStorage";
 import {
   getBpmFeedback,
@@ -55,6 +58,8 @@ export default function BpmFeedbackButtons({
   }, []);
   const suggestedTempoText =
     suggestedTempo == null ? "" : String(suggestedTempo);
+  const hasValidSuggestedTempo =
+    suggestedTempo != null && parseBpmInRange(suggestedTempo) != null;
 
   useEffect(() => {
     setVote(getBpmFeedback(storageKey));
@@ -81,7 +86,7 @@ export default function BpmFeedbackButtons({
           ...apiPayload,
           suggestedArtist: suggestedArtist.trim() || null,
           suggestedSong: suggestedSong.trim() || null,
-          suggestedTempo: suggestedTempo == null ? null : String(suggestedTempo),
+          suggestedTempo: hasValidSuggestedTempo ? suggestedTempo : null,
         });
       }
     },
@@ -93,30 +98,27 @@ export default function BpmFeedbackButtons({
       suggestedSong,
       suggestedTempo,
       vote,
+      hasValidSuggestedTempo,
     ]
   );
 
   const submitSuggestion = useCallback(async () => {
     if (!apiPayload || !session) return;
+    if (!hasValidSuggestedTempo || suggestedTempo == null) return;
     const hasArtistOrSong =
       Boolean(suggestedArtist.trim()) || Boolean(suggestedSong.trim());
-    const hasTempo = suggestedTempo != null;
-    if (variant === "noApiMatch") {
-      if (!hasTempo) return;
-    } else if (!hasArtistOrSong) {
-      return;
-    }
+    if (variant === "parsedMatch" && !hasArtistOrSong) return;
+    const tempoStr = String(suggestedTempo);
     setSuggestionSubmitState("sending");
     const result = await submitBpmFeedback({
       ...apiPayload,
       ...(variant === "noApiMatch"
         ? {
-            calculatedBpm: suggestedTempo == null ? "" : suggestedTempo,
+            calculatedBpm: tempoStr,
             suggestedTempo: null,
           }
         : {
-            suggestedTempo:
-              suggestedTempo == null ? null : suggestedTempo,
+            suggestedTempo: suggestedTempo,
           }),
       suggestedArtist: suggestedArtist.trim() || null,
       suggestedSong: suggestedSong.trim() || null,
@@ -184,7 +186,7 @@ export default function BpmFeedbackButtons({
             onClick={() => void submitSuggestion()}
             disabled={
               !apiPayload ||
-              suggestedTempo == null ||
+              !hasValidSuggestedTempo ||
               suggestionSubmitState === "sending"
             }
             className="mt-1 rounded bg-gray-100 dark:bg-gray-700 px-2 py-1 text-[10px] font-medium disabled:opacity-50"
@@ -268,6 +270,7 @@ export default function BpmFeedbackButtons({
             onClick={() => void submitSuggestion()}
             disabled={
               !apiPayload ||
+              !hasValidSuggestedTempo ||
               (!suggestedArtist.trim() && !suggestedSong.trim()) ||
               suggestionSubmitState === "sending"
             }

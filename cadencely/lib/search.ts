@@ -1,4 +1,10 @@
-import type { ArtistSearchResult, SongSearchResult, AlbumSearchResult, PlaylistSearchResult } from "./types";
+import type {
+  ArtistSearchResult,
+  Song,
+  SongSearchResult,
+  AlbumSearchResult,
+  PlaylistSearchResult,
+} from "./types";
 
 export async function searchSongsApi(
   query: string,
@@ -84,7 +90,7 @@ export async function searchPlaylistsApi(
           pl.author?.name ||
           "Unknown Author",
         count: pl.videoCount ?? pl.videos?.length ?? 0,
-        songs: pl.videos || [],
+        songs: (pl.videos ?? []) as Song[],
       },
     ];
   }

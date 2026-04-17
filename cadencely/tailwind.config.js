@@ -14,6 +14,17 @@ module.exports = {
     darkMode: "class",
     theme: {
         extend: {
+            keyframes: {
+                "fab-queue-bump": {
+                    "0%, 100%": { transform: "scale(1)" },
+                    "40%": { transform: "scale(1.14)" },
+                    "65%": { transform: "scale(1.05)" },
+                },
+            },
+            animation: {
+                "fab-queue-bump":
+                    "fab-queue-bump 0.5s cubic-bezier(0.34, 1.45, 0.64, 1)",
+            },
             fontFamily: {
                 sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
                 mono: ['var(--font-geist-mono)', 'monospace'],

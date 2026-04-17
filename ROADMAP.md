@@ -14,6 +14,8 @@ To provide tempo/BPM (beats per minute) information to users who are trying to f
 ### 1. User Library Integration (OAuth)
 - Implement authentication (e.g., "Login with Spotify", "Login with YouTube Music").
 - Allow users to pull their saved playlists, liked songs, and library directly into the app for parsing.
+- **Support Amazon Prime Music Library** Use Prime Music Authentication to access user's Prime Music library
+- **Support SoundCloud Library:** OAuth (or applicable auth), browse the user’s SoundCloud likes/playlists/uploads where the API allows, and surface tracks with the same BPM / filtering patterns as other library views (subject to SoundCloud API terms and rate limits).
 
 ### 2. Advanced BPM Filtering (Next Up)
 - Allow users to apply and unapply the min/max BPM filter dynamically to all table results.

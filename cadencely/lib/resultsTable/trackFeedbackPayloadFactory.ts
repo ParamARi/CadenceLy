@@ -1,6 +1,6 @@
 import type { BpmFeedbackClientPayload } from "@/lib/bpm/bpmFeedbackApi";
 
-export type TrackFeedbackSource = "artist" | "playlist";
+export type TrackFeedbackSource = "artist" | "playlist" | "album";
 
 /**
  * Builds a stable localStorage/API scope for a track row.
@@ -14,12 +14,18 @@ export function createTrackFeedbackScope(
     /** Artist / album context (artist table) */
     artistContextName?: string;
     playlistId?: string;
+    /** YTMusic album browse id (expanded tracklist) */
+    albumId?: string;
   }
 ): string {
   const vid = input.videoId || `row:${input.rowIndex}`;
   if (source === "artist") {
     const artist = input.artistContextName ?? "";
     return `ar:${artist}:${vid}:${input.rawTitle}`;
+  }
+  if (source === "album") {
+    const al = input.albumId ?? "";
+    return `al:${al}:${vid}:${input.rawTitle}`;
   }
   const pl = input.playlistId ?? "";
   return `pl:${pl}:${vid}:${input.rawTitle}`;
@@ -68,6 +74,7 @@ export function buildTrackFeedbackApiPayload(
         videoId,
         calculatedBpm,
         referenceBpm,
+        suggestedTempo: null,
         parsedSong: input.parsedSong,
         parsedArtist: input.parsedArtist,
         matchedSong: input.matchedSong,
@@ -80,6 +87,7 @@ export function buildTrackFeedbackApiPayload(
       videoId,
       calculatedBpm,
       referenceBpm,
+      suggestedTempo: null,
       parsedSong: input.parsedSong,
       parsedArtist: input.parsedArtist,
       matchedSong: input.matchedSong,
@@ -93,6 +101,7 @@ export function buildTrackFeedbackApiPayload(
       videoId,
       calculatedBpm: "",
       referenceBpm: "",
+      suggestedTempo: null,
       parsedSong: null,
       parsedArtist: null,
       matchedSong: null,
@@ -106,6 +115,7 @@ export function buildTrackFeedbackApiPayload(
     videoId,
     calculatedBpm: "",
     referenceBpm: "",
+    suggestedTempo: null,
     parsedSong: null,
     parsedArtist: null,
     matchedSong: null,

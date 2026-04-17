@@ -15,5 +15,7 @@ declare module "next-auth/jwt" {
     refreshToken?: string;
     /** Unix seconds when `accessToken` expires (from Google). */
     expiresAt?: number;
+    /** Set when refresh_token exchange fails; user should sign in again. */
+    error?: "RefreshAccessTokenError";
   }
 }

@@ -15,10 +15,10 @@ export function ParsedGetSongBody({
   if (parsedArtist && parsedSong) {
     return (
       <div className="flex flex-col text-[11px] text-gray-600 dark:text-gray-300 max-w-[180px] sm:max-w-[220px]">
-        <span className="font-medium truncate" title={parsedArtist}>
+        <span className="font-medium truncate" title={`${parsedArtist} -- ${matchedArtist}`}>
           Parsed Artist: {parsedArtist} -- Matched Artist: {matchedArtist}
         </span>
-        <span className="truncate opacity-80" title={parsedSong}>
+        <span className="truncate opacity-80" title={`${parsedSong} -- ${matchedSong}`}>
           Parsed Song: {parsedSong} -- Matched Song: {matchedSong}
         </span>
       </div>

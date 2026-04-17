@@ -5,6 +5,7 @@ import "../../src/styles/globals.css";
 import "../../src/styles/tailwind.css";
 import { ThemeModeScript, ThemeProvider } from "flowbite-react";
 import { AuthSessionProvider } from "./AuthSessionProvider";
+import { PlaylistQueueProvider } from "@/components/playlist/PlaylistQueueContext";
 import { customTheme } from "./providers";
 
 const geistSans = Geist({
@@ -38,7 +39,9 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}>
         <ThemeProvider theme={customTheme}>
-          <AuthSessionProvider>{children}</AuthSessionProvider>
+          <AuthSessionProvider>
+            <PlaylistQueueProvider>{children}</PlaylistQueueProvider>
+          </AuthSessionProvider>
         </ThemeProvider>
       </body>
     </html>

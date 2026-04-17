@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import YTMusic from "ytmusic-api";
-import { getCachedAlbumById } from "@/lib/ytmusicAlbum";
 
-async function fetchArtist(ytmusic: any, query: string) {
+async function fetchArtist(ytmusic: YTMusic, query: string) {
   // 1. Search for the artist
   const searchResults = await ytmusic.searchArtists(query);
   if (!searchResults || searchResults.length === 0) {
@@ -80,38 +79,47 @@ function normalizePlaylistUrlCandidate(raw: string): string {
   return t;
 }
 
-async function fetchPlaylist(ytmusic: any, query: string) {
+async function fetchPlaylist(
+  ytmusic: any,
+  query: string,
+  explicitPlaylistId?: string
+) {
   const trimmed = query.trim();
-  let playlistId = "";
-
-  try {
-    const url = new URL(normalizePlaylistUrlCandidate(trimmed));
-    const listParam = url.searchParams.get("list");
-    if (listParam) {
-      playlistId = listParam;
-    }
-  } catch {
-    // Not a URL (or invalid) — fall through to text search
-  }
+  const fromParam = explicitPlaylistId?.trim() ?? "";
 
   let idsToTry: string[] = [];
-  if (playlistId) {
-    idsToTry = [playlistId];
+  if (fromParam) {
+    idsToTry = [fromParam];
   } else {
-    const searchResults = await ytmusic.searchPlaylists(trimmed);
-    if (!searchResults || searchResults.length === 0) {
-      return null;
-    }
-    const seen = new Set<string>();
-    for (const row of searchResults.slice(0, 15)) {
-      const id = row?.playlistId;
-      if (typeof id === "string" && id && !seen.has(id)) {
-        seen.add(id);
-        idsToTry.push(id);
+    let playlistId = "";
+    try {
+      const url = new URL(normalizePlaylistUrlCandidate(trimmed));
+      const listParam = url.searchParams.get("list");
+      if (listParam) {
+        playlistId = listParam;
       }
+    } catch {
+      // Not a URL (or invalid) — fall through to text search
     }
-    if (idsToTry.length === 0) {
-      return null;
+
+    if (playlistId) {
+      idsToTry = [playlistId];
+    } else {
+      const searchResults = await ytmusic.searchPlaylists(trimmed);
+      if (!searchResults || searchResults.length === 0) {
+        return null;
+      }
+      const seen = new Set<string>();
+      for (const row of searchResults.slice(0, 15)) {
+        const id = row?.playlistId;
+        if (typeof id === "string" && id && !seen.has(id)) {
+          seen.add(id);
+          idsToTry.push(id);
+        }
+      }
+      if (idsToTry.length === 0) {
+        return null;
+      }
     }
   }
 
@@ -146,6 +154,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") || "artist";
   const albumId = searchParams.get("albumId");
+  const playlistIdParam = searchParams.get("playlistId")?.trim() ?? "";
   const combinedQuery =
     searchParams.get("query") || searchParams.get("artistName") || "";
 
@@ -179,7 +188,9 @@ export async function GET(request: Request) {
 
   if (type === "album" && albumId) {
     try {
-      const albumDetail = await getCachedAlbumById(albumId);
+      const ytmusic = new YTMusic();
+      await ytmusic.initialize();
+      const albumDetail = await ytmusic.getAlbum(albumId.trim());
       return NextResponse.json({ album: albumDetail }, { status: 200 });
     } catch (error) {
       console.error("Error fetching from ytmusic-api:", error);
@@ -190,9 +201,9 @@ export async function GET(request: Request) {
     }
   }
 
-  if (!combinedQuery.trim() && !albumId) {
+  if (!combinedQuery.trim() && !albumId && !playlistIdParam) {
     return NextResponse.json(
-      { error: "query or albumId parameter is required" },
+      { error: "query or albumId or playlistId parameter is required" },
       { status: 400 }
     );
   }
@@ -208,7 +219,11 @@ export async function GET(request: Request) {
     } else if (type === "album") {
       data = await fetchAlbum(ytmusic, combinedQuery || "");
     } else if (type === "playlist") {
-      data = await fetchPlaylist(ytmusic, combinedQuery || "");
+      data = await fetchPlaylist(
+        ytmusic,
+        combinedQuery || "",
+        playlistIdParam || undefined
+      );
     } else {
       return NextResponse.json(
         {

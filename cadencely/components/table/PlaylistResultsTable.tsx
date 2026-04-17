@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import type { PlaylistSearchResult } from "@/lib/types";
+import type { PlaylistSearchResult, Song, SongVideoArtist, SongThumbnail } from "@/lib/types";
 import { ParsedGetSongBody } from "@/components/results/ParsedGetSongBody";
 import { ParsedGetSongTableCell } from "@/components/results/ParsedGetSongTableCell";
 import { TapBpmModalRoot } from "@/components/results/TapBpmModalRoot";
@@ -19,6 +19,7 @@ import {
   Button,
 } from "flowbite-react";
 import type { TapBpmSession } from "@/components/TapBpmModal";
+import { PlaylistQueueCheckbox } from "@/components/playlist/PlaylistQueueCheckbox";
 
 function PlaylistTrackRow({
   song,
@@ -28,19 +29,21 @@ function PlaylistTrackRow({
   maxBPM,
   onOpenTapBpm,
 }: {
-  song: any;
+  song: Song;
   sIdx: number;
   playlistId: string;
   minBPM?: number;
   maxBPM?: number;
   onOpenTapBpm: (session: TapBpmSession) => void;
 }) {
-  const rawTitle = (song.title || song.name || "").trim();
+  const rawTitle = (song.name || "").trim();
   const videoId =
     typeof song.videoId === "string" && song.videoId ? song.videoId : "";
-  const displayArtist =
-    song.artists?.map((a: any) => a.name).join(", ") || "";
-  const lookupArtistName = song.artists?.[0]?.name || "";
+  const displayArtist = song.artist.name;
+  const queueResolve =
+    videoId
+      ? undefined
+      : `${displayArtist} ${rawTitle}`.trim() || undefined;
 
   const {
     tempo,
@@ -60,12 +63,12 @@ function PlaylistTrackRow({
     mode: "playlist",
     rowIndex: sIdx,
     rawTitle,
-    lookupArtistName,
+    lookupArtistName: displayArtist,
     minBPM,
     maxBPM,
     videoId,
     playlistId,
-    lookupEffectDeps: [song.title, song.name, song.artists],
+    lookupEffectDeps: [song.name, song.artist.name],
   });
 
   const rowTone = `bg-white dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all ${
@@ -75,7 +78,7 @@ function PlaylistTrackRow({
   return (
     <Fragment>
       <TableRow className={`${rowTone} sm:hidden`}>
-        <TableCell colSpan={5} className="p-2 align-top">
+        <TableCell colSpan={6} className="p-2 align-top">
           <div className="flex min-w-0 flex-col gap-2 text-xs">
             <div className="flex min-w-0 gap-2">
               <span className="w-5 shrink-0 text-right font-mono text-[10px] text-gray-400">
@@ -84,9 +87,9 @@ function PlaylistTrackRow({
               <div className="min-w-0 flex-1">
                 <div
                   className="truncate font-medium text-gray-900 dark:text-white"
-                  title={song.title || song.name}
+                  title={song.name}
                 >
-                  {song.title || song.name}
+                  {song.name}
                 </div>
                 <div
                   className="mt-0.5 truncate text-[11px] text-gray-500 dark:text-gray-400"
@@ -95,6 +98,12 @@ function PlaylistTrackRow({
                   {displayArtist}
                 </div>
               </div>
+              <PlaylistQueueCheckbox
+                videoId={videoId}
+                resolveQuery={queueResolve}
+                title={rawTitle || "Track"}
+                subtitle={displayArtist}
+              />
             </div>
             <div className="min-w-0 border-t border-gray-100 pt-2 dark:border-gray-600/80 [&_div]:!max-w-none">
               {loading ? (
@@ -160,9 +169,9 @@ function PlaylistTrackRow({
           <div className="flex max-w-[200px] flex-col sm:max-w-[300px]">
             <span
               className="truncate font-medium text-gray-900 dark:text-white"
-              title={song.title || song.name}
+              title={song.name}
             >
-              {song.title || song.name}
+              {song.name}
             </span>
             <span
               className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400"
@@ -219,6 +228,14 @@ function PlaylistTrackRow({
             />
           </div>
         </TableCell>
+        <TableCell className="px-2 py-3 text-center align-middle">
+          <PlaylistQueueCheckbox
+            videoId={videoId}
+            resolveQuery={queueResolve}
+            title={rawTitle || "Track"}
+            subtitle={displayArtist}
+          />
+        </TableCell>
       </TableRow>
     </Fragment>
   );
@@ -236,6 +253,7 @@ function SinglePlaylistView({
   onOpenTapBpm: (session: TapBpmSession) => void;
 }) {
   const songs = playlist.songs || [];
+  console.log(songs);
   const playlistId = playlist.playlistId || "";
 
   return (
@@ -263,7 +281,7 @@ function SinglePlaylistView({
         <Table hoverable className="w-full text-left max-sm:text-xs sm:text-sm">
           <TableHead>
             <TableRow className="bg-gray-50 dark:bg-gray-700/50 sm:hidden">
-              <TableHeadCell colSpan={5} className="px-2 py-2 text-xs font-semibold">
+              <TableHeadCell colSpan={6} className="px-2 py-2 text-xs font-semibold">
                 Track
               </TableHeadCell>
             </TableRow>
@@ -275,10 +293,11 @@ function SinglePlaylistView({
               <TableHeadCell className="px-2 py-2 text-right font-semibold" title="When the title was parsed for GetSong, use 👍/👎 below the BPM">
                 BPM
               </TableHeadCell>
+              <TableHeadCell className="w-12 px-2 py-2 text-center font-semibold">Queue</TableHeadCell>
             </TableRow>
           </TableHead>
           <TableBody className="divide-y">
-            {songs.map((song: any, sIdx: number) => (
+            {songs.map((song: Song, sIdx: number) => (
               <PlaylistTrackRow
                 key={sIdx}
                 song={song}
@@ -291,7 +310,7 @@ function SinglePlaylistView({
             ))}
             {songs.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-sm opacity-50 italic text-center py-4 text-gray-900 dark:text-white">
+                <TableCell colSpan={6} className="text-sm opacity-50 italic text-center py-4 text-gray-900 dark:text-white">
                   No tracks found for this playlist.
                 </TableCell>
               </TableRow>

@@ -42,7 +42,7 @@ describe("buildBpmFeedbackUpstreamJson", () => {
       userId: "user-1",
       rawTitle: "t",
       videoId: "vid",
-      reportedTempo: "100",
+      reportedTempo: 100,
       parsedSong: "m",
       suggestedSong: "s",
       parsedArtist: "ma",

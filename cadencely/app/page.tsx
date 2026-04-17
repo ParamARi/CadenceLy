@@ -9,6 +9,7 @@ import ArtistResultsTable from "@/components/table/ArtistResultsTable";
 import PlaylistResultsTable from "@/components/table/PlaylistResultsTable";
 import SearchSettings from "./SearchSettings";
 import RunningTempoModal from "@/components/RunningTempoModal";
+import UserYoutubeLibraryTable from "@/components/library/UserYoutubeLibraryTable";
 import AppFooter from "@/components/AppFooter";
 import UserAuthControls from "@/components/UserAuthControls";
 import { filterByBpmRange } from "@/lib/filters";
@@ -36,6 +37,8 @@ export default function Home() {
   /** Playlist mode: last search returned no loadable playlist (vs. initial empty state). */
   const [playlistHadNoMatch, setPlaylistHadNoMatch] = useState(false);
   const [runningTempoOpen, setRunningTempoOpen] = useState(false);
+  /** Browse signed-in user’s YouTube playlists (hides search UI). */
+  const [libraryMode, setLibraryMode] = useState(false);
 
   const handleApplyFilter = useCallback(() => {
     setIsFilterApplied(true);
@@ -124,6 +127,48 @@ export default function Home() {
         <h1 className="font-bitcount text-[clamp(2rem,12vw+0.75rem,8rem)] font-extrabold text-center mb-6 sm:mb-10 leading-none tracking-tight">
           DJ-Cadence
         </h1>
+
+        <RunningTempoModal
+          show={runningTempoOpen}
+          onClose={() => setRunningTempoOpen(false)}
+          onApplyFilterRange={handleApplyRunningTempoFilter}
+        />
+
+        {libraryMode ? (
+          <>
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+              <Button
+                type="button"
+                color="gray"
+                size="sm"
+                className="touch-manipulation"
+                onClick={() => setLibraryMode(false)}
+              >
+                ← Back to search
+              </Button>
+            </div>
+            <SearchSettings
+              searchType={searchType}
+              minBPM={minBPM}
+              maxBPM={maxBPM}
+              onChange={setSearchType}
+              onBpmChange={handleBpmChange}
+              onApplyFilter={handleApplyFilter}
+              onClearFilter={handleClearFilter}
+              isFilterApplied={isFilterApplied}
+              onOpenRunningTempo={() => setRunningTempoOpen(true)}
+              hideSearchTypeRadios
+            />
+            <h2 className="mb-3 mt-4 text-center text-xl font-semibold text-gray-900 dark:text-white sm:text-left">
+              Your YouTube playlists
+            </h2>
+            <UserYoutubeLibraryTable
+              minBPM={isFilterApplied ? minBPM : undefined}
+              maxBPM={isFilterApplied ? maxBPM : undefined}
+            />
+          </>
+        ) : (
+          <>
         <SearchSettings 
           searchType={searchType} 
           minBPM={minBPM} 
@@ -134,12 +179,7 @@ export default function Home() {
           onClearFilter={handleClearFilter}
           isFilterApplied={isFilterApplied}
           onOpenRunningTempo={() => setRunningTempoOpen(true)}
-        />
-
-        <RunningTempoModal
-          show={runningTempoOpen}
-          onClose={() => setRunningTempoOpen(false)}
-          onApplyFilterRange={handleApplyRunningTempoFilter}
+          onBrowseMyPlaylists={() => setLibraryMode(true)}
         />
 
         <form
@@ -223,6 +263,8 @@ export default function Home() {
             </p>
           )}
         </section>
+          </>
+        )}
         </main>
       </div>
       <AppFooter />
