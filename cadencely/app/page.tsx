@@ -7,7 +7,7 @@ import type { ArtistSearchResult, SongSearchResult } from "@/lib/types";
 import SongResultsTable from "@/components/table/SongResultsTable";
 import ArtistResultsTable from "@/components/table/ArtistResultsTable";
 import PlaylistResultsTable from "@/components/table/PlaylistResultsTable";
-import SearchSettings from "./SearchSettings";
+import SearchSettings from "@/components/SearchSettings";
 import RunningTempoModal from "@/components/RunningTempoModal";
 import UserYoutubeLibraryTable from "@/components/library/UserYoutubeLibraryTable";
 import AppFooter from "@/components/AppFooter";
@@ -127,6 +127,10 @@ export default function Home() {
         <h1 className="font-bitcount text-[clamp(2rem,12vw+0.75rem,8rem)] font-extrabold text-center mb-6 sm:mb-10 leading-none tracking-tight">
           DJ-Cadence
         </h1>
+
+        <p className="mx-auto mb-6 max-w-xl px-4 text-center text-pretty font-sans text-base font-medium leading-relaxed text-gray-600 dark:text-gray-400 sm:mb-8 sm:max-w-2xl sm:text-lg">
+          Sort your music by BPM and find the perfect tracks for your runs and workouts.
+        </p>
 
         <RunningTempoModal
           show={runningTempoOpen}

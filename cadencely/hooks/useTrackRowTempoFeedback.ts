@@ -78,13 +78,8 @@ function applyLookupResult(
 
   setParsedArtist(null);
   setParsedSong(null);
-  if (mode === "artist") {
-    setMatchedSong(result.matchedSong);
-    setMatchedArtist(result.matchedArtist);
-  } else {
-    setMatchedSong(null);
-    setMatchedArtist(null);
-  }
+  setMatchedSong(result.matchedSong ?? null);
+  setMatchedArtist(result.matchedArtist ?? null);
 }
 
 /**
@@ -113,9 +108,6 @@ export function useTrackRowTempoFeedback({
   const [matchedSong, setMatchedSong] = useState<string | null>(null);
   const [matchedArtist, setMatchedArtist] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [prefillSuggestedTempo, setPrefillSuggestedTempo] = useState<string | null>(
-    null
-  );
 
   useEffect(() => {
     const cacheKey = tempoLookupCacheKey({
@@ -228,50 +220,33 @@ export function useTrackRowTempoFeedback({
     [feedbackScope, rawTitle, tempo, usedParsedFallback, parsedSong, parsedArtist]
   );
 
-  const hasApiTempo = Boolean(tempo && tempo !== "-");
-  const showParsedFeedback = Boolean(!loading && hasApiTempo && usedParsedFallback);
-  const showNoMatchFeedback = Boolean(!loading && !hasApiTempo);
-  const showFeedback = showParsedFeedback || showNoMatchFeedback;
-
   const feedbackApiPayload = useMemo(():
     | BpmFeedbackClientPayload
     | null => {
     return buildTrackFeedbackApiPayload({
       source,
-      showFeedback,
-      showParsedFeedback,
-      rowIndex,
       rawTitle,
       tempo,
-      usedParsedFallback,
       videoId,
       parsedSong,
       parsedArtist,
       matchedSong,
       matchedArtist,
-      playlistId,
       artistContextName,
     });
   }, [
     source,
-    showFeedback,
-    showParsedFeedback,
-    rowIndex,
     rawTitle,
     tempo,
-    usedParsedFallback,
     videoId,
     parsedSong,
     parsedArtist,
     matchedSong,
     matchedArtist,
-    playlistId,
     artistContextName,
   ]);
 
-  const onMeasuredBpmFromTap = useCallback((nextBpm: number) => {
-    setPrefillSuggestedTempo(String(nextBpm));
-  }, []);
+  const onMeasuredBpmFromTap = useCallback((_nextBpm: number) => {}, []);
 
   return {
     tempo,
@@ -281,12 +256,9 @@ export function useTrackRowTempoFeedback({
     parsedSong,
     matchedSong,
     matchedArtist,
-    prefillSuggestedTempo,
     onMeasuredBpmFromTap,
     isOutOfRange,
     feedbackKey,
-    showFeedback,
-    showNoMatchFeedback,
     feedbackApiPayload,
   };
 }

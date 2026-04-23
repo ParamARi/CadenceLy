@@ -14,7 +14,7 @@ import {
   ExpandedState,
 } from "@tanstack/react-table";
 import { searchAlbumsApi } from "@/lib/search";
-import BpmFeedbackButtons from "@/components/BpmFeedbackButtons";
+import { TrackRowBpmColumn } from "@/components/results/TrackRowBpmColumn";
 import { Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Button, Card } from "flowbite-react";
 import { cn } from "@/lib/utils";
 import { HiChevronDown, HiChevronUp } from "react-icons/hi";
@@ -56,12 +56,9 @@ function TrackRow({
     parsedSong,
     matchedSong,
     matchedArtist,
-    prefillSuggestedTempo,
     onMeasuredBpmFromTap,
     isOutOfRange,
     feedbackKey,
-    showFeedback,
-    showNoMatchFeedback,
     feedbackApiPayload,
   } = useTrackRowTempoFeedback({
     mode: "album",
@@ -75,11 +72,11 @@ function TrackRow({
     lookupEffectDeps: [song.name, song.title, trackArtist, artistName],
   });
 
-  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
-  const toggleFeedbackForm = () => {
-    setShowFeedbackForm(!showFeedbackForm);
-  };
+  useEffect(() => {
+    setFeedbackOpen(false);
+  }, [feedbackKey]);
 
   const rowTone = `bg-white dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all ${
     isOutOfRange ? "opacity-30 grayscale" : ""
@@ -92,80 +89,67 @@ function TrackRow({
       videoId: videoId || undefined,
       onUseMeasuredBpm: onMeasuredBpmFromTap,
     });
-    setShowFeedbackForm(true);
+    setFeedbackOpen(true);
   };
 
   return (
     <Fragment>
       <TableRow className={`${rowTone} sm:hidden`}>
-        <TableCell colSpan={6} className="p-2 align-top">
+        <TableCell colSpan={6} className="px-1.5 py-2 align-top">
           <div className="flex min-w-0 flex-col gap-2 text-xs">
-            <div className="flex min-w-0 gap-2">
-              <span className="w-5 shrink-0 text-right font-mono text-[10px] text-gray-400">
-                {sIdx + 1}.
-              </span>
-              <div className="min-w-0 flex-1 font-medium text-gray-900 dark:text-white">
-                <span className="block truncate" title={song.name ?? song.title}>
-                  {song.name ?? song.title ?? "—"}
+            <div className="flex min-w-0 items-start gap-1">
+              <div className="flex min-w-0 flex-1 items-start gap-1">
+                <span className="w-4 shrink-0 text-right font-mono text-[10px] text-gray-400">
+                  {sIdx + 1}.
                 </span>
+                <div className="min-w-0 flex-1 font-medium text-gray-900 dark:text-white">
+                  <span className="block truncate" title={song.name ?? song.title}>
+                    {song.name ?? song.title ?? "—"}
+                  </span>
+                </div>
               </div>
-              <PlaylistQueueCheckbox
-                videoId={videoId}
-                resolveQuery={queueResolve}
-                title={rawTitle || "Track"}
-                subtitle={displayArtist}
-              />
+              <div className="flex shrink-0 flex-col items-center pt-0.5">
+                <PlaylistQueueCheckbox
+                  videoId={videoId}
+                  resolveQuery={queueResolve}
+                  title={rawTitle || "Track"}
+                  subtitle={displayArtist}
+                />
+              </div>
             </div>
             <div className="min-w-0 border-t border-gray-100 pt-2 dark:border-gray-600/80 [&_div]:!max-w-none">
-              {loading ? (
-                <Spinner size="sm" />
-              ) : (
-                <ParsedGetSongBody
-                  parsedArtist={parsedArtist}
-                  parsedSong={parsedSong}
-                  matchedArtist={matchedArtist}
-                  matchedSong={matchedSong}
-                />
-              )}
+              <ParsedGetSongBody
+                parsedArtist={parsedArtist}
+                parsedSong={parsedSong}
+                matchedArtist={matchedArtist}
+                matchedSong={matchedSong}
+              />
             </div>
-            <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-2 dark:border-gray-600/80">
-              {videoId ? (
-                <Button size="xs" color="light" className="touch-manipulation" onClick={openTap}>
-                  Tap BPM
-                </Button>
-              ) : (
-                <span className="text-[11px] text-gray-400 dark:text-gray-500">—</span>
-              )}
-              {loading ? null : tempo && tempo !== "-" ? (
-                <Badge
-                  color="indigo"
-                  size="sm"
-                  className="inline-flex w-fit font-mono text-[11px]"
-                >
-                  {tempo} BPM
-                </Badge>
-              ) : (
-                <Button
-                  size="xs"
-                  color="light"
-                  className="text-[11px] italic opacity-80"
-                  onClick={toggleFeedbackForm}
-                >
-                  Not Found
-                </Button>
-              )}
-            </div>
-            {showFeedbackForm ? (
-              <div className="border-t border-gray-100 pt-2 dark:border-gray-600/80">
-                <BpmFeedbackButtons
-                  storageKey={feedbackKey}
-                  visible={showFeedback}
-                  variant={showNoMatchFeedback ? "noApiMatch" : "parsedMatch"}
-                  prefillSuggestedTempo={prefillSuggestedTempo}
-                  apiPayload={feedbackApiPayload}
-                />
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-2 dark:border-gray-600/80">
+                <div className="shrink-0">
+                  {videoId ? (
+                    <Button size="xs" color="light" className="touch-manipulation" onClick={openTap}>
+                      Tap BPM
+                    </Button>
+                  ) : (
+                    <span className="text-[11px] text-gray-400 dark:text-gray-500">—</span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  {loading ? null : (
+                    <TrackRowBpmColumn
+                      loading={loading}
+                      tempo={tempo}
+                      feedbackKey={feedbackKey}
+                      feedbackApiPayload={feedbackApiPayload}
+                      feedbackOpen={feedbackOpen}
+                      setFeedbackOpen={setFeedbackOpen}
+                    />
+                  )}
+                </div>
               </div>
-            ) : null}
+            </div>
           </div>
         </TableCell>
       </TableRow>
@@ -183,7 +167,6 @@ function TrackRow({
           parsedSong={parsedSong}
           matchedArtist={matchedArtist}
           matchedSong={matchedSong}
-          loading={loading}
         />
         <TableCell className="whitespace-nowrap px-2 py-3">
           {videoId ? (
@@ -195,28 +178,14 @@ function TrackRow({
           )}
         </TableCell>
         <TableCell className="px-2 py-3 text-right align-top">
-          <div className="flex flex-col items-end gap-0">
-            {loading ? (
-              <Spinner size="sm" />
-            ) : tempo && tempo !== "-" ? (
-              <Badge color="indigo" size="sm" className="inline-flex w-fit font-mono">
-                {tempo} BPM
-              </Badge>
-            ) : (
-              <Button className="text-xs italic opacity-50" onClick={toggleFeedbackForm}>
-                Not Found
-              </Button>
-            )}
-            {showFeedbackForm ? (
-              <BpmFeedbackButtons
-                storageKey={feedbackKey}
-                visible={showFeedback}
-                variant={showNoMatchFeedback ? "noApiMatch" : "parsedMatch"}
-                prefillSuggestedTempo={prefillSuggestedTempo}
-                apiPayload={feedbackApiPayload}
-              />
-            ) : null}
-          </div>
+          <TrackRowBpmColumn
+            loading={loading}
+            tempo={tempo}
+            feedbackKey={feedbackKey}
+            feedbackApiPayload={feedbackApiPayload}
+            feedbackOpen={feedbackOpen}
+            setFeedbackOpen={setFeedbackOpen}
+          />
         </TableCell>
         <TableCell className="px-2 py-3 text-center align-middle">
           <PlaylistQueueCheckbox

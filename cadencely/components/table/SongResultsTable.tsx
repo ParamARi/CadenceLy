@@ -11,7 +11,7 @@ import {
   flexRender,
   createColumnHelper,
 } from "@tanstack/react-table";
-import { Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Progress, Spinner, Button } from "flowbite-react";
+import { Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Progress, Button } from "flowbite-react";
 import { cn } from "@/lib/utils";
 import { PlaylistQueueCheckbox } from "@/components/playlist/PlaylistQueueCheckbox";
 
@@ -28,7 +28,6 @@ function SongParsedGetSongCell({
   title: string;
   artistName: string;
 }) {
-  const [loading, setLoading] = useState(true);
   const [parsedArtist, setParsedArtist] = useState<string | null>(null);
   const [parsedSong, setParsedSong] = useState<string | null>(null);
   const [matchedSong, setMatchedSong] = useState<string | null>(null);
@@ -37,7 +36,6 @@ function SongParsedGetSongCell({
   useEffect(() => {
     let isMounted = true;
     async function run() {
-      setLoading(true);
       try {
         const result = await lookupTempoWithParsedTitleFallback({
           rawTitle: title.trim(),
@@ -52,8 +50,8 @@ function SongParsedGetSongCell({
         } else {
           setParsedArtist(null);
           setParsedSong(null);
-          setMatchedSong(null);
-          setMatchedArtist(null);
+          setMatchedSong(result.matchedSong ?? null);
+          setMatchedArtist(result.matchedArtist ?? null);
         }
       } catch {
         if (isMounted) {
@@ -62,8 +60,6 @@ function SongParsedGetSongCell({
           setMatchedSong(null);
           setMatchedArtist(null);
         }
-      } finally {
-        if (isMounted) setLoading(false);
       }
     }
     void run();
@@ -71,10 +67,6 @@ function SongParsedGetSongCell({
       isMounted = false;
     };
   }, [title, artistName]);
-
-  if (loading) {
-    return <Spinner size="sm" />;
-  }
 
   return (
     <ParsedGetSongBody

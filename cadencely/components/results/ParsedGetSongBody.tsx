@@ -1,5 +1,7 @@
 /**
  * Shared “Parsed (GetSong)” display used by track tables and song search.
+ * Always uses the two-line layout so the column stays consistent; missing
+ * values render as an em dash.
  */
 export function ParsedGetSongBody({
   parsedArtist,
@@ -12,20 +14,19 @@ export function ParsedGetSongBody({
   matchedArtist: string | null;
   matchedSong: string | null;
 }) {
-  if (parsedArtist && parsedSong) {
-    return (
-      <div className="flex flex-col text-[11px] text-gray-600 dark:text-gray-300 max-w-[180px] sm:max-w-[220px]">
-        <span className="font-medium truncate" title={`${parsedArtist} -- ${matchedArtist}`}>
-          Parsed Artist: {parsedArtist} -- Matched Artist: {matchedArtist}
-        </span>
-        <span className="truncate opacity-80" title={`${parsedSong} -- ${matchedSong}`}>
-          Parsed Song: {parsedSong} -- Matched Song: {matchedSong}
-        </span>
-      </div>
-    );
-  }
+  const pa = parsedArtist?.trim() || "—";
+  const ps = parsedSong?.trim() || "—";
+  const ma = matchedArtist?.trim() || "—";
+  const ms = matchedSong?.trim() || "—";
 
   return (
-    <span className="text-xs text-gray-400 dark:text-gray-500 italic">—</span>
+    <div className="flex max-w-[180px] flex-col text-[11px] text-gray-600 dark:text-gray-300 sm:max-w-[220px]">
+      <span className="truncate font-medium" title={`${pa} / ${ma}`}>
+        Parsed Artist: {pa} — Matched Artist: {ma}
+      </span>
+      <span className="truncate opacity-80" title={`${ps} / ${ms}`}>
+        Parsed Song: {ps} — Matched Song: {ms}
+      </span>
+    </div>
   );
 }

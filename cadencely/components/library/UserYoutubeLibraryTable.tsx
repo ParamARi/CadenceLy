@@ -1,8 +1,15 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
-  Badge,
+  useReactTable,
+  getCoreRowModel,
+  getExpandedRowModel,
+  flexRender,
+  createColumnHelper,
+  type ExpandedState,
+} from "@tanstack/react-table";
+import {
   Button,
   Spinner,
   Table,
@@ -17,9 +24,10 @@ import { PlaylistQueueCheckbox } from "@/components/playlist/PlaylistQueueCheckb
 import { ParsedGetSongBody } from "@/components/results/ParsedGetSongBody";
 import { TapBpmModalRoot } from "@/components/results/TapBpmModalRoot";
 import type { TapBpmSession } from "@/components/TapBpmModal";
-import BpmFeedbackButtons from "@/components/BpmFeedbackButtons";
+import { TrackRowBpmColumn } from "@/components/results/TrackRowBpmColumn";
 import { useTapBpmSession } from "@/hooks/useTapBpmSession";
 import { useTrackRowTempoFeedback } from "@/hooks/useTrackRowTempoFeedback";
+import { cn } from "@/lib/utils";
 
 type PlaylistRow = {
   id: string;
@@ -34,10 +42,19 @@ type PlaylistItemRow = {
   id?: string;
   snippet?: {
     title?: string;
-    /** Present on many playlist items; helps GetSong / tempo lookup. */
     videoOwnerChannelTitle?: string;
     resourceId?: { videoId?: string };
   };
+};
+
+type LibraryPlaylistColMeta = {
+  headClassName?: string;
+  cellClassName?: string;
+};
+
+const LIBRARY_DESKTOP_COL_META: LibraryPlaylistColMeta = {
+  headClassName: "hidden sm:table-cell",
+  cellClassName: "hidden sm:table-cell align-middle",
 };
 
 /** Map ytmusic-api playlist track (`getPlaylistVideos`) into the snippet shape the table expects. */
@@ -61,6 +78,178 @@ function ytmusicPlaylistVideoToItemRow(v: unknown): PlaylistItemRow {
   };
 }
 
+const libraryPlaylistColumnHelper = createColumnHelper<PlaylistRow>();
+
+const libraryPlaylistColumns = [
+  libraryPlaylistColumnHelper.display({
+    id: "playlistMobile",
+    header: "Playlist",
+    meta: {
+      headClassName: "sm:hidden",
+      cellClassName: "sm:hidden align-middle p-2",
+    } satisfies LibraryPlaylistColMeta,
+    cell: ({ row }) => {
+      const pl = row.original;
+      const title = pl.snippet?.title ?? "(Untitled)";
+      const thumb = pl.snippet?.thumbnails?.default?.url;
+      const count = pl.contentDetails?.itemCount ?? "—";
+      const isExpanded = row.getIsExpanded();
+      return (
+        <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex min-w-0 items-start gap-2">
+            <Button
+              color="gray"
+              size="xs"
+              pill
+              className="mt-0.5 shrink-0 border-none !p-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                row.toggleExpanded();
+              }}
+              aria-expanded={isExpanded}
+              aria-label={isExpanded ? "Collapse" : "Expand"}
+            >
+              {isExpanded ? (
+                <HiChevronUp className="h-5 w-5" />
+              ) : (
+                <HiChevronDown className="h-5 w-5" />
+              )}
+            </Button>
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-center gap-2">
+                {thumb ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={thumb}
+                    alt=""
+                    className="h-9 w-9 shrink-0 rounded object-cover"
+                  />
+                ) : (
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-gray-100 dark:bg-gray-700">
+                    <span className="text-xs text-gray-400">♪</span>
+                  </div>
+                )}
+                <span className="min-w-0 font-medium text-gray-900 dark:text-white">
+                  {title}
+                </span>
+              </div>
+              <div className="mt-1 tabular-nums text-[11px] text-gray-600 dark:text-gray-300">
+                {count} videos
+              </div>
+            </div>
+          </div>
+          <Button
+            size="xs"
+            color={isExpanded ? "dark" : "light"}
+            className="w-full touch-manipulation"
+            onClick={(e) => {
+              e.stopPropagation();
+              row.toggleExpanded();
+            }}
+          >
+            {isExpanded ? "Hide tracks" : "View tracks"}
+          </Button>
+        </div>
+      );
+    },
+  }),
+  libraryPlaylistColumnHelper.display({
+    id: "expander",
+    header: () => null,
+    meta: {
+      ...LIBRARY_DESKTOP_COL_META,
+      headClassName: `${LIBRARY_DESKTOP_COL_META.headClassName} w-10 px-2`,
+      cellClassName: `${LIBRARY_DESKTOP_COL_META.cellClassName} px-2 py-2`,
+    } satisfies LibraryPlaylistColMeta,
+    cell: ({ row }) => (
+      <Button
+        color="gray"
+        size="xs"
+        pill
+        className="border-none !p-1"
+        onClick={(e) => {
+          e.stopPropagation();
+          row.toggleExpanded();
+        }}
+        aria-expanded={row.getIsExpanded()}
+        aria-label={row.getIsExpanded() ? "Collapse" : "Expand"}
+      >
+        {row.getIsExpanded() ? (
+          <HiChevronUp className="h-5 w-5" />
+        ) : (
+          <HiChevronDown className="h-5 w-5" />
+        )}
+      </Button>
+    ),
+  }),
+  libraryPlaylistColumnHelper.display({
+    id: "playlistTitle",
+    header: "Playlist",
+    meta: {
+      ...LIBRARY_DESKTOP_COL_META,
+      cellClassName: `${LIBRARY_DESKTOP_COL_META.cellClassName} px-2 py-2`,
+    } satisfies LibraryPlaylistColMeta,
+    cell: ({ row }) => {
+      const pl = row.original;
+      const title = pl.snippet?.title ?? "(Untitled)";
+      const thumb = pl.snippet?.thumbnails?.default?.url;
+      return (
+        <div className="flex min-w-0 items-center gap-3">
+          {thumb ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={thumb}
+              alt=""
+              className="h-10 w-10 shrink-0 rounded object-cover"
+            />
+          ) : (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-gray-100 dark:bg-gray-700">
+              <span className="text-xs text-gray-400">♪</span>
+            </div>
+          )}
+          <span className="min-w-0 font-medium text-gray-900 dark:text-white">
+            {title}
+          </span>
+        </div>
+      );
+    },
+  }),
+  libraryPlaylistColumnHelper.display({
+    id: "videoCount",
+    header: "Videos",
+    meta: {
+      ...LIBRARY_DESKTOP_COL_META,
+      headClassName: `${LIBRARY_DESKTOP_COL_META.headClassName} w-24 px-2`,
+      cellClassName: `${LIBRARY_DESKTOP_COL_META.cellClassName} px-2 py-2 tabular-nums text-gray-600 dark:text-gray-300`,
+    } satisfies LibraryPlaylistColMeta,
+    cell: ({ row }) => row.original.contentDetails?.itemCount ?? "—",
+  }),
+  libraryPlaylistColumnHelper.display({
+    id: "tracksAction",
+    header: "Tracks",
+    meta: {
+      ...LIBRARY_DESKTOP_COL_META,
+      headClassName: `${LIBRARY_DESKTOP_COL_META.headClassName} w-36 px-2 text-right`,
+      cellClassName: `${LIBRARY_DESKTOP_COL_META.cellClassName} px-2 py-2 text-right`,
+    } satisfies LibraryPlaylistColMeta,
+    cell: ({ row }) => {
+      const isExpanded = row.getIsExpanded();
+      return (
+        <Button
+          size="xs"
+          color={isExpanded ? "dark" : "light"}
+          onClick={(e) => {
+            e.stopPropagation();
+            row.toggleExpanded();
+          }}
+        >
+          {isExpanded ? "Hide tracks" : "View tracks"}
+        </Button>
+      );
+    },
+  }),
+];
+
 function LibraryPlaylistTrackRow({
   item,
   idx,
@@ -76,8 +265,6 @@ function LibraryPlaylistTrackRow({
   maxBPM?: number;
   onOpenTapBpm: (session: TapBpmSession) => void;
 }) {
-  const [notFoundFeedbackOpen, setNotFoundFeedbackOpen] = useState(false);
-
   const rawTitle = (item.snippet?.title ?? "").trim() || "(Untitled)";
   const vid =
     typeof item.snippet?.resourceId?.videoId === "string"
@@ -99,12 +286,9 @@ function LibraryPlaylistTrackRow({
     parsedSong,
     matchedSong,
     matchedArtist,
-    prefillSuggestedTempo,
     onMeasuredBpmFromTap,
     isOutOfRange,
     feedbackKey,
-    showFeedback,
-    showNoMatchFeedback,
     feedbackApiPayload,
   } = useTrackRowTempoFeedback({
     mode: "playlist",
@@ -122,24 +306,13 @@ function LibraryPlaylistTrackRow({
     ],
   });
 
-  const showNotFound = !loading && (!tempo || tempo === "-");
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   useEffect(() => {
-    setNotFoundFeedbackOpen(false);
-  }, [
-    item.snippet?.title,
-    item.snippet?.videoOwnerChannelTitle,
-    item.snippet?.resourceId?.videoId,
-    feedbackKey,
-  ]);
+    setFeedbackOpen(false);
+  }, [feedbackKey]);
 
-  useEffect(() => {
-    if (!showNotFound) setNotFoundFeedbackOpen(false);
-  }, [showNotFound]);
-
-  /** Phase-shift inner zebra so it lines up with the expanded `stripeExpanded` row (outer `odd:`/`even:` is covered by these cells). */
-  const trackStripeLight =
-    idx % 2 === 0;
+  const trackStripeLight = idx % 2 === 0;
   const rowTone = `${
     trackStripeLight
       ? "bg-white dark:bg-gray-950/40"
@@ -179,68 +352,51 @@ function LibraryPlaylistTrackRow({
               />
             </div>
             <div className="min-w-0 border-t border-gray-100 pt-2 dark:border-gray-600/80 [&_div]:!max-w-none">
-              {loading ? (
-                <Spinner size="sm" />
-              ) : (
-                <ParsedGetSongBody
-                  parsedArtist={parsedArtist}
-                  parsedSong={parsedSong}
-                  matchedArtist={matchedArtist}
-                  matchedSong={matchedSong}
-                />
-              )}
+              <ParsedGetSongBody
+                parsedArtist={parsedArtist}
+                parsedSong={parsedSong}
+                matchedArtist={matchedArtist}
+                matchedSong={matchedSong}
+              />
             </div>
-            <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-2 dark:border-gray-600/80">
-              {vid ? (
-                <Button
-                  size="xs"
-                  color="light"
-                  className="touch-manipulation"
-                  onClick={() =>
-                    onOpenTapBpm({
-                      title: rawTitle,
-                      artistName: displayArtist,
-                      videoId: vid || undefined,
-                      onUseMeasuredBpm: onMeasuredBpmFromTap,
-                    })
-                  }
-                >
-                  Tap BPM
-                </Button>
-              ) : (
-                <span className="text-[11px] text-gray-400 dark:text-gray-500">—</span>
-              )}
-              {loading ? null : tempo && tempo !== "-" ? (
-                <Badge
-                  color="indigo"
-                  size="sm"
-                  className="inline-flex w-fit font-mono text-[11px]"
-                >
-                  {tempo} BPM
-                </Badge>
-              ) : (
-                <Button
-                  type="button"
-                  size="xs"
-                  color="light"
-                  className="text-[11px] italic opacity-80 touch-manipulation"
-                  onClick={() => setNotFoundFeedbackOpen(!notFoundFeedbackOpen)}
-                >
-                  Not Found
-                </Button>
-              )}
-            </div>
-            {notFoundFeedbackOpen ? (
-              <div className="border-t border-gray-100 pt-2 dark:border-gray-600/80">
-                <BpmFeedbackButtons
-                  storageKey={feedbackKey}
-                  visible
-                  variant={showNoMatchFeedback ? "noApiMatch" : "parsedMatch"}
-                  prefillSuggestedTempo={prefillSuggestedTempo}
-                  apiPayload={feedbackApiPayload}
-                />
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-2 dark:border-gray-600/80">
+                <div className="shrink-0">
+                  {vid ? (
+                    <Button
+                      size="xs"
+                      color="light"
+                      className="touch-manipulation"
+                      onClick={() => {
+                        setFeedbackOpen(true);
+                        onOpenTapBpm({
+                          title: rawTitle,
+                          artistName: displayArtist,
+                          videoId: vid || undefined,
+                          onUseMeasuredBpm: onMeasuredBpmFromTap,
+                        });
+                      }}
+                    >
+                      Tap BPM
+                    </Button>
+                  ) : (
+                    <span className="text-[11px] text-gray-400 dark:text-gray-500">—</span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  {loading ? null : (
+                    <TrackRowBpmColumn
+                      loading={loading}
+                      tempo={tempo}
+                      feedbackKey={feedbackKey}
+                      feedbackApiPayload={feedbackApiPayload}
+                      feedbackOpen={feedbackOpen}
+                      setFeedbackOpen={setFeedbackOpen}
+                    />
+                  )}
+                </div>
               </div>
-            ) : null}
+            </div>
           </div>
         </TableCell>
       </TableRow>
@@ -267,30 +423,27 @@ function LibraryPlaylistTrackRow({
           </div>
         </TableCell>
         <TableCell className="max-w-[180px] px-2 py-1.5 sm:max-w-[220px]">
-          {loading ? (
-            <Spinner size="sm" />
-          ) : (
-            <ParsedGetSongBody
-              parsedArtist={parsedArtist}
-              parsedSong={parsedSong}
-              matchedArtist={matchedArtist}
-              matchedSong={matchedSong}
-            />
-          )}
+          <ParsedGetSongBody
+            parsedArtist={parsedArtist}
+            parsedSong={parsedSong}
+            matchedArtist={matchedArtist}
+            matchedSong={matchedSong}
+          />
         </TableCell>
         <TableCell className="whitespace-nowrap py-1.5">
           {vid ? (
             <Button
               size="xs"
               color="light"
-              onClick={() =>
+              onClick={() => {
+                setFeedbackOpen(true);
                 onOpenTapBpm({
                   title: rawTitle,
                   artistName: displayArtist,
                   videoId: vid || undefined,
                   onUseMeasuredBpm: onMeasuredBpmFromTap,
-                })
-              }
+                });
+              }}
             >
               Tap BPM
             </Button>
@@ -299,34 +452,14 @@ function LibraryPlaylistTrackRow({
           )}
         </TableCell>
         <TableCell className="py-1.5 text-right align-top">
-          <div className="flex flex-col items-end gap-0">
-            {loading ? (
-              <Spinner size="sm" />
-            ) : tempo && tempo !== "-" ? (
-              <Badge color="indigo" size="sm" className="inline-flex w-fit font-mono text-xs">
-                {tempo} BPM
-              </Badge>
-            ) : (
-              <Button
-                type="button"
-                size="xs"
-                color="light"
-                className="text-xs italic opacity-80"
-                onClick={() => setNotFoundFeedbackOpen(!notFoundFeedbackOpen)}
-              >
-                Not Found
-              </Button>
-            )}
-            {notFoundFeedbackOpen ? (
-              <BpmFeedbackButtons
-                storageKey={feedbackKey}
-                visible
-                variant={showNoMatchFeedback ? "noApiMatch" : "parsedMatch"}
-                prefillSuggestedTempo={prefillSuggestedTempo}
-                apiPayload={feedbackApiPayload}
-              />
-            ) : null}
-          </div>
+          <TrackRowBpmColumn
+            loading={loading}
+            tempo={tempo}
+            feedbackKey={feedbackKey}
+            feedbackApiPayload={feedbackApiPayload}
+            feedbackOpen={feedbackOpen}
+            setFeedbackOpen={setFeedbackOpen}
+          />
         </TableCell>
         <TableCell className="py-1.5 text-center align-middle">
           <PlaylistQueueCheckbox
@@ -338,6 +471,82 @@ function LibraryPlaylistTrackRow({
         </TableCell>
       </TableRow>
     </Fragment>
+  );
+}
+
+function ExpandedLibraryPlaylistTracks({
+  playlistId,
+  itemsByPlaylist,
+  loadingItemsId,
+  minBPM,
+  maxBPM,
+  onOpenTapBpm,
+  stripeExpandedClassName,
+}: {
+  playlistId: string;
+  itemsByPlaylist: Record<string, PlaylistItemRow[]>;
+  loadingItemsId: string | null;
+  minBPM?: number;
+  maxBPM?: number;
+  onOpenTapBpm: (session: TapBpmSession) => void;
+  stripeExpandedClassName: string;
+}) {
+  const items = itemsByPlaylist[playlistId];
+  const loadingItems = loadingItemsId === playlistId;
+
+  return (
+    <TableRow className={stripeExpandedClassName}>
+      <TableCell colSpan={5} className="p-0">
+        <div className="border-t border-gray-200 px-2 py-3 dark:border-gray-600 sm:px-4">
+          {loadingItems ? (
+            <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-500">
+              <Spinner size="sm" />
+              Loading tracks…
+            </div>
+          ) : !items || items.length === 0 ? (
+            <p className="py-4 text-center text-sm italic text-gray-500">
+              No videos in this playlist.
+            </p>
+          ) : (
+            <Table className="w-full text-left text-xs sm:text-sm" hoverable>
+              <TableHead>
+                <TableRow className="bg-gray-100 dark:bg-gray-800 sm:hidden">
+                  <TableHeadCell colSpan={7} className="py-1 text-xs font-semibold">
+                    Track
+                  </TableHeadCell>
+                </TableRow>
+                <TableRow className="hidden bg-gray-100 dark:bg-gray-800 sm:table-row">
+                  <TableHeadCell className="w-10 py-1 text-right">#</TableHeadCell>
+                  <TableHeadCell className="py-1">Title</TableHeadCell>
+                  <TableHeadCell className="py-1">Parsed (GetSong)</TableHeadCell>
+                  <TableHeadCell className="py-1">Tap BPM</TableHeadCell>
+                  <TableHeadCell
+                    className="py-1 text-right"
+                    title="When the title was parsed for GetSong, use 👍/👎 below the BPM"
+                  >
+                    BPM
+                  </TableHeadCell>
+                  <TableHeadCell className="w-12 py-1 text-center">Queue</TableHeadCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {items.map((it, idx) => (
+                  <LibraryPlaylistTrackRow
+                    key={it.id ?? `${playlistId}-${idx}`}
+                    item={it}
+                    idx={idx}
+                    playlistId={playlistId}
+                    minBPM={minBPM}
+                    maxBPM={maxBPM}
+                    onOpenTapBpm={onOpenTapBpm}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -355,7 +564,7 @@ export default function UserYoutubeLibraryTable({
   const [playlists, setPlaylists] = useState<PlaylistRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<ExpandedState>({});
   const [itemsByPlaylist, setItemsByPlaylist] = useState<
     Record<string, PlaylistItemRow[]>
   >({});
@@ -391,56 +600,70 @@ export default function UserYoutubeLibraryTable({
     };
   }, []);
 
-  // Load playlist items when playlist is expanded
   useEffect(() => {
-    if (!expandedId) return;
-    if (loadedPlaylistIdsRef.current.has(expandedId)) return;
+    const expandedPlaylistIds =
+      typeof expanded === "object" && expanded !== null
+        ? Object.entries(expanded)
+            .filter(([, isOpen]) => isOpen)
+            .map(([id]) => id)
+        : [];
+    if (expandedPlaylistIds.length === 0) return;
 
     let cancelled = false;
-    (async () => {
-      setLoadingItemsId(expandedId);
-      try {
-        const res = await fetch(
-          `/api/ytmusic?type=playlist&playlistId=${encodeURIComponent(expandedId)}`
-        );
-        console.log("ytmusicPlaylist Response", res);
-        const data = (await res.json()) as {
-          playlist?: { videos?: unknown[] };
-          error?: string;
-        };
-        console.log("ytmusicPlaylist Data", data);
-        if (!res.ok) {
-          throw new Error(
-            typeof data.error === "string" ? data.error : `HTTP ${res.status}`
+
+    async function loadExpandedPlaylists() {
+      for (const expandedId of expandedPlaylistIds) {
+        if (cancelled) return;
+        if (!expandedId || loadedPlaylistIdsRef.current.has(expandedId)) continue;
+
+        setLoadingItemsId(expandedId);
+        try {
+          const res = await fetch(
+            `/api/ytmusic?type=playlist&playlistId=${encodeURIComponent(expandedId)}`
           );
-        }
-        const items = (data.playlist?.videos ?? []).map(
-          ytmusicPlaylistVideoToItemRow
-        );
-        if (!cancelled) {
+          const data = (await res.json()) as {
+            playlist?: { videos?: unknown[] };
+            error?: string;
+          };
+          if (cancelled) return;
+          if (!res.ok) {
+            throw new Error(
+              typeof data.error === "string" ? data.error : `HTTP ${res.status}`
+            );
+          }
+          const items = (data.playlist?.videos ?? []).map(ytmusicPlaylistVideoToItemRow);
           setItemsByPlaylist((prev) => ({
             ...prev,
             [expandedId]: items,
           }));
           loadedPlaylistIdsRef.current.add(expandedId);
+        } catch {
+          if (!cancelled) {
+            setItemsByPlaylist((prev) => ({ ...prev, [expandedId]: [] }));
+          }
+        } finally {
+          if (!cancelled) setLoadingItemsId(null);
         }
-      } catch {
-        if (!cancelled) {
-          setItemsByPlaylist((prev) => ({ ...prev, [expandedId]: [] }));
-        }
-      } finally {
-        if (!cancelled) setLoadingItemsId(null);
       }
-    })();
+    }
+
+    void loadExpandedPlaylists();
 
     return () => {
       cancelled = true;
     };
-  }, [expandedId]);
+  }, [expanded]);
 
-  const toggleExpand = useCallback((playlistId: string) => {
-    setExpandedId((prev) => (prev === playlistId ? null : playlistId));
-  }, []);
+  const table = useReactTable({
+    data: playlists,
+    columns: libraryPlaylistColumns,
+    state: { expanded },
+    onExpandedChange: setExpanded,
+    getRowId: (row) => row.id,
+    getRowCanExpand: () => true,
+    getCoreRowModel: getCoreRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+  });
 
   if (loading) {
     return (
@@ -459,8 +682,8 @@ export default function UserYoutubeLibraryTable({
       >
         {error}
         <p className="mt-2 text-xs opacity-90">
-          If you signed in before YouTube access was added, sign out and sign in
-          again, then retry.
+          If you signed in before YouTube access was added, sign out and sign in again, then
+          retry.
         </p>
       </div>
     );
@@ -476,160 +699,88 @@ export default function UserYoutubeLibraryTable({
 
   return (
     <>
-    <div className="my-6 overflow-hidden rounded-lg border border-gray-200 shadow-md dark:border-gray-700">
-      <div className="overflow-x-auto">
-        <Table hoverable className="w-full text-left text-sm">
-          <TableHead>
-            <TableRow className="bg-gray-50 dark:bg-gray-700/50">
-              <TableHeadCell className="w-10 px-2 py-2" />
-              <TableHeadCell className="px-2 py-2 font-semibold">Playlist</TableHeadCell>
-              <TableHeadCell className="w-24 px-2 py-2 font-semibold">Videos</TableHeadCell>
-              <TableHeadCell className="w-36 px-2 py-2 text-right font-semibold">
-                Tracks
-              </TableHeadCell>
-            </TableRow>
-          </TableHead>
-          <TableBody className="divide-y">
-            {playlists.map((pl, rowIdx) => {
-              const id = pl.id;
-              const title = pl.snippet?.title ?? "(Untitled)";
-              const thumb = pl.snippet?.thumbnails?.default?.url;
-              const count = pl.contentDetails?.itemCount ?? "—";
-              const open = expandedId === id;
-              const items = itemsByPlaylist[id];
-              const loadingItems = loadingItemsId === id;
-              const stripeMain =
-                rowIdx % 2 === 0
-                  ? "bg-white dark:bg-gray-800"
-                  : "bg-gray-50/95 dark:bg-gray-800/90";
-              const stripeExpanded =
-                rowIdx % 2 === 0
-                  ? "bg-gray-50/90 dark:bg-gray-900/35"
-                  : "bg-gray-100/85 dark:bg-gray-900/50";
-
-              return (
-                <Fragment key={id}>
-                  <TableRow className={stripeMain}>
-                    <TableCell className="px-2 py-2 align-middle">
-                      <Button
-                        color="gray"
-                        size="xs"
-                        pill
-                        className="border-none !p-1"
-                        onClick={() => toggleExpand(id)}
-                        aria-expanded={open}
-                        aria-label={open ? "Collapse" : "Expand"}
-                      >
-                        {open ? (
-                          <HiChevronUp className="h-5 w-5" />
-                        ) : (
-                          <HiChevronDown className="h-5 w-5" />
-                        )}
-                      </Button>
-                    </TableCell>
-                    <TableCell className="px-2 py-2 align-middle">
-                      <div className="flex min-w-0 items-center gap-3">
-                        {thumb ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={thumb}
-                            alt=""
-                            className="h-10 w-10 shrink-0 rounded object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-gray-100 dark:bg-gray-700">
-                            <span className="text-xs text-gray-400">♪</span>
-                          </div>
-                        )}
-                        <span className="min-w-0 font-medium text-gray-900 dark:text-white">
-                          {title}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-2 py-2 align-middle tabular-nums text-gray-600 dark:text-gray-300">
-                      {count}
-                    </TableCell>
-                    <TableCell className="px-2 py-2 text-right align-middle">
-                      <Button
-                        size="xs"
-                        color={open ? "dark" : "light"}
-                        onClick={() => toggleExpand(id)}
-                      >
-                        {open ? "Hide tracks" : "View tracks"}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                  {open ? (
-                    <TableRow className={stripeExpanded}>
-                      <TableCell colSpan={4} className="p-0">
-                        <div className="border-t border-gray-200 px-2 py-3 dark:border-gray-600 sm:px-4">
-                          {loadingItems ? (
-                            <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-500">
-                              <Spinner size="sm" />
-                              Loading tracks…
-                            </div>
-                          ) : !items || items.length === 0 ? (
-                            <p className="py-4 text-center text-sm italic text-gray-500">
-                              No videos in this playlist.
-                            </p>
-                          ) : (
-                            <Table className="w-full text-left text-xs sm:text-sm" hoverable>
-                              <TableHead>
-                                <TableRow className="bg-gray-100 dark:bg-gray-800 sm:hidden">
-                                  <TableHeadCell
-                                    colSpan={7}
-                                    className="py-1 text-xs font-semibold"
-                                  >
-                                    Track
-                                  </TableHeadCell>
-                                </TableRow>
-                                <TableRow className="hidden bg-gray-100 dark:bg-gray-800 sm:table-row">
-                                  <TableHeadCell className="w-10 py-1 text-right">
-                                    #
-                                  </TableHeadCell>
-                                  <TableHeadCell className="py-1">Title</TableHeadCell>
-                                  <TableHeadCell className="py-1">
-                                    Parsed (GetSong)
-                                  </TableHeadCell>
-                                  <TableHeadCell className="py-1">Tap BPM</TableHeadCell>
-                                  <TableHeadCell
-                                    className="py-1 text-right"
-                                    title="When the title was parsed for GetSong, use 👍/👎 below the BPM"
-                                  >
-                                    BPM
-                                  </TableHeadCell>
-                                  <TableHeadCell className="w-12 py-1 text-center">
-                                    Queue
-                                  </TableHeadCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {items.map((it, idx) => (
-                                  <LibraryPlaylistTrackRow
-                                    key={it.id ?? `${id}-${idx}`}
-                                    item={it}
-                                    idx={idx}
-                                    playlistId={id}
-                                    minBPM={minBPM}
-                                    maxBPM={maxBPM}
-                                    onOpenTapBpm={openTapBpm}
-                                  />
-                                ))}
-                              </TableBody>
-                            </Table>
+      <div className="overflow-hidden rounded-lg border border-gray-200 shadow-md dark:border-gray-700 sm:my-6">
+        <div className="overflow-x-auto">
+          <Table hoverable className="w-full text-left text-sm">
+            <TableHead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow
+                  key={headerGroup.id}
+                  className="bg-gray-50 dark:bg-gray-700/50"
+                >
+                  {headerGroup.headers.map((header) => (
+                    <TableHeadCell
+                      key={header.id}
+                      className={cn(
+                        "px-2 py-2 font-semibold",
+                        (header.column.columnDef.meta as LibraryPlaylistColMeta | undefined)
+                          ?.headClassName
+                      )}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
                           )}
-                        </div>
-                      </TableCell>
+                    </TableHeadCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHead>
+            <TableBody className="divide-y">
+              {table.getRowModel().rows.map((row) => {
+                const rowIdx = row.index;
+                const stripeMain =
+                  rowIdx % 2 === 0
+                    ? "bg-white dark:bg-gray-800"
+                    : "bg-gray-50/95 dark:bg-gray-800/90";
+                const stripeExpanded =
+                  rowIdx % 2 === 0
+                    ? "bg-gray-50/90 dark:bg-gray-900/35"
+                    : "bg-gray-100/85 dark:bg-gray-900/50";
+
+                return (
+                  <Fragment key={row.id}>
+                    <TableRow
+                      className={cn(
+                        stripeMain,
+                        "cursor-pointer hover:bg-gray-50/80 dark:hover:bg-gray-700/40",
+                        row.getIsExpanded() && "bg-gray-50 dark:bg-gray-700/50"
+                      )}
+                      onClick={row.getToggleExpandedHandler()}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          className={cn(
+                            (cell.column.columnDef.meta as LibraryPlaylistColMeta | undefined)
+                              ?.cellClassName
+                          )}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
                     </TableRow>
-                  ) : null}
-                </Fragment>
-              );
-            })}
-          </TableBody>
-        </Table>
+                    {row.getIsExpanded() ? (
+                      <ExpandedLibraryPlaylistTracks
+                        playlistId={row.original.id}
+                        itemsByPlaylist={itemsByPlaylist}
+                        loadingItemsId={loadingItemsId}
+                        minBPM={minBPM}
+                        maxBPM={maxBPM}
+                        onOpenTapBpm={openTapBpm}
+                        stripeExpandedClassName={stripeExpanded}
+                      />
+                    ) : null}
+                  </Fragment>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       </div>
-    </div>
-    <TapBpmModalRoot session={tapBpmSession} onClose={closeTapBpm} />
+      <TapBpmModalRoot session={tapBpmSession} onClose={closeTapBpm} />
     </>
   );
 }

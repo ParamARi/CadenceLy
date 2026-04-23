@@ -183,7 +183,7 @@ export default function SearchSettings({
               className="w-20"
             />
           </div>
-          
+
           <div className="flex items-center gap-2 ml-2">
             {!isFilterApplied ? (
               <Button size="sm" color="gray" onClick={onApplyFilter} disabled={!minBPM && !maxBPM}>
@@ -200,4 +200,3 @@ export default function SearchSettings({
     </div>
   );
 }
-

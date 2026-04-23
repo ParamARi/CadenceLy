@@ -33,18 +33,13 @@ export function createTrackFeedbackScope(
 
 type BuildPayloadInput = {
   source: TrackFeedbackSource;
-  showFeedback: boolean;
-  showParsedFeedback: boolean;
-  rowIndex: number;
   rawTitle: string;
   tempo: string | null;
-  usedParsedFallback: boolean;
   videoId: string;
   parsedSong: string | null;
   parsedArtist: string | null;
   matchedSong: string | null;
   matchedArtist: string | null;
-  playlistId?: string;
   /** Artist table: row artist / album context */
   artistContextName?: string;
 };
@@ -56,17 +51,16 @@ type BuildPayloadInput = {
 export function buildTrackFeedbackApiPayload(
   input: BuildPayloadInput
 ): BpmFeedbackClientPayload | null {
-  if (!input.showFeedback) return null;
-
   const videoId = (input.videoId ?? "").trim();
   if (!videoId) return null;
 
   const rawTitle =
     (input.rawTitle ?? "").trim() || `video:${videoId}`;
 
-  if (input.showParsedFeedback) {
-    const calculatedBpm =
-      input.tempo && input.tempo !== "-" ? input.tempo.trim() : "";
+  const hasCalculatedBpm = Boolean(input.tempo && input.tempo !== "-");
+
+  if (hasCalculatedBpm) {
+    const calculatedBpm = input.tempo!.trim();
     const referenceBpm = calculatedBpm;
     if (input.source === "artist") {
       return {

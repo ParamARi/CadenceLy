@@ -7,7 +7,7 @@ export type SubmitBpmFeedbackResult =
 /**
  * POST to Next `/api/feedback/bpm`, which validates and proxies to
  * Express when `FEEDBACK_API_URL` points at your Express POST URL (see `feedbackUpstream.ts`).
- * Failures are logged; localStorage still holds the vote from the caller.
+ * Failures are logged on the client.
  */
 export async function submitBpmFeedback(
   body: BpmFeedbackClientPayload
@@ -17,7 +17,6 @@ export async function submitBpmFeedback(
       ...body,
       clientSentAt: body.clientSentAt ?? new Date().toISOString(),
     };
-    console.log("payload", payload);
     const res = await fetch("/api/feedback/bpm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

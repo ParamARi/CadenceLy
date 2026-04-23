@@ -1,4 +1,4 @@
-import { Spinner, TableCell } from "flowbite-react";
+import { TableCell } from "flowbite-react";
 import { ParsedGetSongBody } from "@/components/results/ParsedGetSongBody";
 
 type Props = {
@@ -6,7 +6,6 @@ type Props = {
   parsedSong: string | null;
   matchedArtist: string | null;
   matchedSong: string | null;
-  loading: boolean;
 };
 
 /**
@@ -17,15 +16,7 @@ export function ParsedGetSongTableCell({
   parsedSong,
   matchedArtist,
   matchedSong,
-  loading,
 }: Props) {
-  if (loading) {
-    return (
-      <TableCell className="px-2 py-3 max-w-[180px] sm:max-w-[220px]">
-        <Spinner size="sm" />
-      </TableCell>
-    );
-  }
   return (
     <TableCell className="px-2 py-3 max-w-[180px] sm:max-w-[220px]">
       <ParsedGetSongBody
