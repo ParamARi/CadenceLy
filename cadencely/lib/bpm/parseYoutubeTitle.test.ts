@@ -43,4 +43,38 @@ describe("buildParsedYoutubeTitleQueries", () => {
     expect(candidates[0]?.parsedArtist).toBe("Adele");
     expect(candidates[0]?.parsedSong).toBe("Hello");
   });
+
+  it("strips trailing remaster/mix before splitting for GetSong-style titles", () => {
+    const queries = buildParsedYoutubeTitleQueries("Something (2019 Mix)", "The Beatles");
+    expect(queries).toContain("Something");
+  });
+
+  it("preserves catalog parentheses when only trailing segment is edition metadata", () => {
+    const queries = buildParsedYoutubeTitleQueries(
+      "I Want You (She's So Heavy) (2019 Mix)",
+      "The Beatles"
+    );
+    // Match catalog title after trailing "(2019 Mix)" is stripped (apostrophe may be ASCII or typographic in API data)
+    expect(queries.some((q) => /So Heavy/i.test(q))).toBe(true);
+    const candidates = buildParsedYoutubeTitleCandidates(
+      "I Want You (She's So Heavy) (2019 Mix)",
+      "The Beatles"
+    );
+    expect(
+      candidates.some((c) => /So Heavy/i.test(c.parsedSong) || /So Heavy/i.test(c.query))
+    ).toBe(true);
+  });
+
+  it("strips deluxe / anniversary parentheticals for query building", () => {
+    const queries = buildParsedYoutubeTitleQueries(
+      "Warning (25th Anniversary Deluxe Edition)",
+      "Green Day"
+    );
+    expect(queries).toContain("Warning");
+  });
+
+  it("does not strip non-metadata trailing parens from query list", () => {
+    const queries = buildParsedYoutubeTitleQueries("Rockin' Around (Christmas Tree)", "Brenda Lee");
+    expect(queries.some((q) => q.includes("Christmas Tree"))).toBe(true);
+  });
 });

@@ -1,4 +1,5 @@
 import { findBestSongMatch } from "@/lib/filters";
+import { normalizeCatalogTitleForLookup } from "@/lib/bpm/catalogTitleForLookup";
 import {
   buildParsedYoutubeTitleCandidates,
   type ParsedYoutubeTitleCandidate,
@@ -28,7 +29,7 @@ export async function lookupTempoWithParsedTitleFallback(input: {
   matchedSong: string | null;
   matchedArtist: string | null;
 }> {
-  const baseQuery = input.rawTitle.trim();
+  const baseQuery = normalizeCatalogTitleForLookup(input.rawTitle);
   if (!baseQuery) {
     return {
       tempo: null,

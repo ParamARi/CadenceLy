@@ -18,9 +18,15 @@ const googleScopes = [
  * Google OAuth (Gmail / Google account). Set in `.env.local`:
  * - `AUTH_SECRET` — `openssl rand -base64 32`
  * - `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` — from Google Cloud Console OAuth client
- * - `AUTH_URL` — e.g. `http://localhost:3000` (production: your site origin)
+ * - `AUTH_URL` — full origin, e.g. `https://example.com` or `http://localhost:3000`
+ *   (a hostname without `https://` is accepted and normalized for non-local hosts)
  *
  * Redirect URI in Google Console: `{AUTH_URL}/api/auth/callback/google`
+ *
+ * **Azure Container Apps:** the *secret resource* name can be dashed lowercase
+ * (e.g. `auth-secret`). The *container environment variable* you bind it to
+ * should still be `AUTH_SECRET` (and likewise for `AUTH_URL`, `AUTH_GOOGLE_*`).
+ * Those are two different fields in the API / “add environment variable” flow.
  *
  * YouTube Data API v3: add the same scopes under **OAuth consent screen**
  * and enable **YouTube Data API v3** for the GCP project. Tokens live in the JWT only;
@@ -33,6 +39,8 @@ const googleScopes = [
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Google({
+      clientId: process.env.AUTH_GOOGLE_ID?.trim(),
+      clientSecret: process.env.AUTH_GOOGLE_SECRET?.trim(),
       authorization: {
         params: {
           scope: googleScopes,

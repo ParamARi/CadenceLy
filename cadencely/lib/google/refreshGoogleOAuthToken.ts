@@ -15,8 +15,8 @@ export type GoogleRefreshErr = { ok: false; error: string };
 export async function refreshGoogleOAuthToken(
   refreshToken: string
 ): Promise<GoogleRefreshOk | GoogleRefreshErr> {
-  const clientId = process.env.AUTH_GOOGLE_ID;
-  const clientSecret = process.env.AUTH_GOOGLE_SECRET;
+  const clientId = process.env.AUTH_GOOGLE_ID?.trim();
+  const clientSecret = process.env.AUTH_GOOGLE_SECRET?.trim();
   if (!clientId || !clientSecret) {
     return { ok: false, error: "Missing AUTH_GOOGLE_ID or AUTH_GOOGLE_SECRET" };
   }

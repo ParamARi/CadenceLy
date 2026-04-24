@@ -1,4 +1,5 @@
 import type { lookupTempoWithParsedTitleFallback } from "@/lib/bpm/lookupTempoWithParsedTitle";
+import { normalizeCatalogTitleForLookup } from "@/lib/bpm/catalogTitleForLookup";
 
 export type TempoLookupCachedResult = Awaited<
   ReturnType<typeof lookupTempoWithParsedTitleFallback>
@@ -23,7 +24,8 @@ export function tempoLookupCacheKey(input: {
   if (/^[a-zA-Z0-9_-]{11}$/.test(vid)) {
     return `v:${vid}`;
   }
-  return `t:${normalizeKeyPart(input.rawTitle)}|${normalizeKeyPart(input.artistName)}`;
+  const titleForKey = normalizeCatalogTitleForLookup(input.rawTitle);
+  return `t:${normalizeKeyPart(titleForKey)}|${normalizeKeyPart(input.artistName)}`;
 }
 
 export function getTempoLookupFromSessionCache(

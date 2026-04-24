@@ -1,5 +1,6 @@
+import { normalizeCatalogTitleForLookup } from "@/lib/bpm/catalogTitleForLookup";
+
 const SEP_REGEX = /\s*(?:\||~|—|–|-)\s*/g;
-const BRACKET_CHUNKS_REGEX = /\[[^\]]*]|\([^)]*\)|\{[^}]*\}/g;
 
 function cleanToken(value: string): string {
   return value
@@ -16,11 +17,11 @@ export function buildParsedYoutubeTitleQueries(
   rawTitle: string,
   artistName: string
 ): string[] {
-  const title = cleanToken(rawTitle);
+  const title = normalizeCatalogTitleForLookup(rawTitle);
   if (!title) return [];
 
   const artist = cleanToken(artistName).toLowerCase();
-  const withoutBrackets = cleanToken(title.replace(BRACKET_CHUNKS_REGEX, " "));
+  const withoutBrackets = title;
   const parts = withoutBrackets
     .split(SEP_REGEX)
     .map(cleanToken)
@@ -60,12 +61,12 @@ export function buildParsedYoutubeTitleCandidates(
   rawTitle: string,
   artistName: string
 ): ParsedYoutubeTitleCandidate[] {
-  const title = cleanToken(rawTitle);
+  const title = normalizeCatalogTitleForLookup(rawTitle);
   if (!title) return [];
 
   const knownArtist = cleanToken(artistName);
   const knownArtistLower = knownArtist.toLowerCase();
-  const withoutBrackets = cleanToken(title.replace(BRACKET_CHUNKS_REGEX, " "));
+  const withoutBrackets = title;
   const parts = withoutBrackets
     .split(SEP_REGEX)
     .map(cleanToken)
