@@ -12,6 +12,7 @@ import RunningTempoModal from "@/components/RunningTempoModal";
 import UserYoutubeLibraryTable from "@/components/library/UserYoutubeLibraryTable";
 import AppFooter from "@/components/AppFooter";
 import UserAuthControls from "@/components/UserAuthControls";
+import { BuyMeACoffee } from "@/components/BuyMeACoffee";
 import { filterByBpmRange } from "@/lib/filters";
 import {
   searchSongsApi,
@@ -121,7 +122,8 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
       <div className="flex flex-1 items-center">
         <main className="w-full justify-center p-10 rounded-lg shadow-md">
-        <div className="mb-4 flex justify-end">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <BuyMeACoffee variant="header" />
           <UserAuthControls />
         </div>
         <h1 className="font-bitcount text-[clamp(2rem,12vw+0.75rem,8rem)] font-extrabold text-center mb-6 sm:mb-10 leading-none tracking-tight">

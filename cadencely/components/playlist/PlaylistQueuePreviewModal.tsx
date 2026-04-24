@@ -18,6 +18,7 @@ import {
 import { HiInformationCircle } from "react-icons/hi";
 import type { PlaylistQueueItem } from "./PlaylistQueueContext";
 import { PLAYLIST_ADD_ITEMS_MAX_VIDEOS } from "@/lib/youtube/playlistAddItemsLimits";
+import { BuyMeACoffee } from "@/components/BuyMeACoffee";
 
 type PlaylistListItem = {
   id: string;
@@ -53,6 +54,8 @@ export function PlaylistQueuePreviewModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  /** Shown after a successful save only when a new YouTube playlist was created. */
+  const [showBuyMeCoffeeTip, setShowBuyMeCoffeeTip] = useState(false);
 
   useEffect(() => {
     if (!show || !signedIn || targetMode !== "existing") return;
@@ -94,6 +97,7 @@ export function PlaylistQueuePreviewModal({
       setError(null);
       setSuccess(null);
       setSubmitting(false);
+      setShowBuyMeCoffeeTip(false);
     }
   }, [show]);
 
@@ -107,6 +111,7 @@ export function PlaylistQueuePreviewModal({
     }
     setError(null);
     setSuccess(null);
+    setShowBuyMeCoffeeTip(false);
     setSubmitting(true);
     try {
       let playlistId = existingId.trim();
@@ -178,6 +183,7 @@ export function PlaylistQueuePreviewModal({
         setSuccess(
           `Added ${addData.addedCount ?? addedIds.length} video(s) to your YouTube playlist.`
         );
+        setShowBuyMeCoffeeTip(targetMode === "new");
         onClear();
       }
     } catch (e) {
@@ -247,6 +253,7 @@ export function PlaylistQueuePreviewModal({
             {success}
           </Alert>
         ) : null}
+        {showBuyMeCoffeeTip ? <BuyMeACoffee variant="postPlaylist" /> : null}
 
         <div className="mb-4 max-h-52 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-600">
           {items.length === 0 ? (
