@@ -25,6 +25,7 @@ function PlaylistTrackRow({
   playlistId,
   minBPM,
   maxBPM,
+  includeBpmMultiples,
   onOpenTapBpm,
 }: {
   song: Song;
@@ -32,6 +33,7 @@ function PlaylistTrackRow({
   playlistId: string;
   minBPM?: number;
   maxBPM?: number;
+  includeBpmMultiples?: boolean;
   onOpenTapBpm: (session: TapBpmSession) => void;
 }) {
   const rawTitle = (song.name || "").trim();
@@ -52,6 +54,7 @@ function PlaylistTrackRow({
     matchedArtist,
     onMeasuredBpmFromTap,
     isOutOfRange,
+    bpmRangeMatch,
     feedbackKey,
     feedbackApiPayload,
   } = useTrackRowTempoFeedback({
@@ -61,6 +64,7 @@ function PlaylistTrackRow({
     lookupArtistName: displayArtist,
     minBPM,
     maxBPM,
+    includeBpmMultiples,
     videoId,
     playlistId,
     lookupEffectDeps: [song.name, song.artist.name],
@@ -145,6 +149,7 @@ function PlaylistTrackRow({
                     feedbackApiPayload={feedbackApiPayload}
                     feedbackOpen={feedbackOpen}
                     setFeedbackOpen={setFeedbackOpen}
+                    bpmRangeMatch={bpmRangeMatch}
                   />
                 </div>
               </div>
@@ -206,6 +211,7 @@ function PlaylistTrackRow({
             feedbackApiPayload={feedbackApiPayload}
             feedbackOpen={feedbackOpen}
             setFeedbackOpen={setFeedbackOpen}
+            bpmRangeMatch={bpmRangeMatch}
           />
         </TableCell>
         <TableCell className="px-2 py-3 text-center align-middle">
@@ -225,11 +231,13 @@ function SinglePlaylistView({
   playlist,
   minBPM,
   maxBPM,
+  includeBpmMultiples,
   onOpenTapBpm,
 }: {
   playlist: PlaylistSearchResult;
   minBPM?: number;
   maxBPM?: number;
+  includeBpmMultiples?: boolean;
   onOpenTapBpm: (session: TapBpmSession) => void;
 }) {
   const songs = playlist.songs || [];
@@ -285,6 +293,7 @@ function SinglePlaylistView({
                 playlistId={playlistId}
                 minBPM={minBPM}
                 maxBPM={maxBPM}
+                includeBpmMultiples={includeBpmMultiples}
                 onOpenTapBpm={onOpenTapBpm}
               />
             ))}
@@ -306,9 +315,15 @@ type Props = {
   results: PlaylistSearchResult[];
   minBPM?: number;
   maxBPM?: number;
+  includeBpmMultiples?: boolean;
 };
 
-export default function PlaylistResultsTable({ results, minBPM, maxBPM }: Props) {
+export default function PlaylistResultsTable({
+  results,
+  minBPM,
+  maxBPM,
+  includeBpmMultiples,
+}: Props) {
   const { session: tapBpmSession, open: openTapBpm, close: closeTapBpm } =
     useTapBpmSession();
 
@@ -329,6 +344,7 @@ export default function PlaylistResultsTable({ results, minBPM, maxBPM }: Props)
             playlist={playlist}
             minBPM={minBPM}
             maxBPM={maxBPM}
+            includeBpmMultiples={includeBpmMultiples}
             onOpenTapBpm={openTapBpm}
           />
         ))}

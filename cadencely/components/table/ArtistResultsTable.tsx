@@ -28,6 +28,7 @@ function TrackRow({
   artistName,
   minBPM,
   maxBPM,
+  includeBpmMultiples,
   onOpenTapBpm,
 }: {
   song: any;
@@ -38,6 +39,7 @@ function TrackRow({
   artistName: string;
   minBPM?: number;
   maxBPM?: number;
+  includeBpmMultiples?: boolean;
   onOpenTapBpm: (session: TapBpmSession) => void;
 }) {
   const rawTitle = String(song.name ?? song.title ?? "").trim();
@@ -58,6 +60,7 @@ function TrackRow({
     matchedArtist,
     onMeasuredBpmFromTap,
     isOutOfRange,
+    bpmRangeMatch,
     feedbackKey,
     feedbackApiPayload,
   } = useTrackRowTempoFeedback({
@@ -67,6 +70,7 @@ function TrackRow({
     lookupArtistName: displayArtist,
     minBPM,
     maxBPM,
+    includeBpmMultiples,
     videoId,
     albumId,
     lookupEffectDeps: [song.name, song.title, trackArtist, artistName],
@@ -145,6 +149,7 @@ function TrackRow({
                       feedbackApiPayload={feedbackApiPayload}
                       feedbackOpen={feedbackOpen}
                       setFeedbackOpen={setFeedbackOpen}
+                      bpmRangeMatch={bpmRangeMatch}
                     />
                   )}
                 </div>
@@ -185,6 +190,7 @@ function TrackRow({
             feedbackApiPayload={feedbackApiPayload}
             feedbackOpen={feedbackOpen}
             setFeedbackOpen={setFeedbackOpen}
+            bpmRangeMatch={bpmRangeMatch}
           />
         </TableCell>
         <TableCell className="px-2 py-3 text-center align-middle">
@@ -205,12 +211,14 @@ function ExpandedAlbumRow({
   artistName,
   minBPM,
   maxBPM,
+  includeBpmMultiples,
   onOpenTapBpm,
 }: {
   albumId: string;
   artistName: string;
   minBPM?: number;
   maxBPM?: number;
+  includeBpmMultiples?: boolean;
   onOpenTapBpm: (session: TapBpmSession) => void;
 }) {
   const [songs, setSongs] = useState<any[]>([]);
@@ -275,6 +283,7 @@ function ExpandedAlbumRow({
                     artistName={artistName}
                     minBPM={minBPM}
                     maxBPM={maxBPM}
+                    includeBpmMultiples={includeBpmMultiples}
                     onOpenTapBpm={onOpenTapBpm}
                   />
                 ))}
@@ -446,12 +455,14 @@ function SingleAlbumTracklist({
   artistName,
   minBPM,
   maxBPM,
+  includeBpmMultiples,
   onOpenTapBpm,
 }: {
   album: ArtistAlbum;
   artistName: string;
   minBPM?: number;
   maxBPM?: number;
+  includeBpmMultiples?: boolean;
   onOpenTapBpm: (session: TapBpmSession) => void;
 }) {
   const [songs, setSongs] = useState<any[]>([]);
@@ -520,6 +531,7 @@ function SingleAlbumTracklist({
                 artistName={artistName}
                 minBPM={minBPM}
                 maxBPM={maxBPM}
+                includeBpmMultiples={includeBpmMultiples}
                 onOpenTapBpm={onOpenTapBpm}
               />
             ))}
@@ -539,9 +551,15 @@ type Props = {
   results: ArtistSearchResult[];
   minBPM?: number;
   maxBPM?: number;
+  includeBpmMultiples?: boolean;
 };
 
-export default function ArtistResultsTable({ results, minBPM, maxBPM }: Props) {
+export default function ArtistResultsTable({
+  results,
+  minBPM,
+  maxBPM,
+  includeBpmMultiples,
+}: Props) {
   const { session: tapBpmSession, open: openTapBpm, close: closeTapBpm } =
     useTapBpmSession();
 
@@ -586,6 +604,7 @@ export default function ArtistResultsTable({ results, minBPM, maxBPM }: Props) {
           artistName={allAlbumsWithArtist[0].artistName}
           minBPM={minBPM}
           maxBPM={maxBPM}
+          includeBpmMultiples={includeBpmMultiples}
           onOpenTapBpm={openTapBpm}
         />
         {tapBpmModal}
@@ -653,6 +672,7 @@ export default function ArtistResultsTable({ results, minBPM, maxBPM }: Props) {
                         artistName={row.original.artistName}
                         minBPM={minBPM}
                         maxBPM={maxBPM}
+                        includeBpmMultiples={includeBpmMultiples}
                         onOpenTapBpm={openTapBpm}
                       />
                     </TableCell>

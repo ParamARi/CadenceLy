@@ -13,6 +13,8 @@ export type SearchSettingsProps = {
   onApplyFilter: () => void;
   onClearFilter: () => void;
   isFilterApplied: boolean;
+  includeBpmMultiples: boolean;
+  onToggleBpmMultiples: (enabled: boolean) => void;
   /** Opens the running-cadence helper (tap tempo → tempo filter ±5 BPM). */
   onOpenRunningTempo?: () => void;
   /** Browse signed-in user’s YouTube playlists (requires OAuth token with YouTube scope). */
@@ -32,6 +34,8 @@ export default function SearchSettings({
   onApplyFilter,
   onClearFilter,
   isFilterApplied,
+  includeBpmMultiples,
+  onToggleBpmMultiples,
   onOpenRunningTempo,
   onBrowseMyPlaylists,
   hideSearchTypeRadios = false,
@@ -195,6 +199,15 @@ export default function SearchSettings({
               </Button>
             )}
           </div>
+          <label className="ml-2 inline-flex cursor-pointer items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+            <input
+              type="checkbox"
+              checked={includeBpmMultiples}
+              onChange={(e) => onToggleBpmMultiples(e.target.checked)}
+              className="h-3.5 w-3.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+            />
+            Match half/double tempo
+          </label>
         </div>
       </div>
     </div>
