@@ -14,6 +14,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Badge, Progress, Button } from "flowbite-react";
 import { cn } from "@/lib/utils";
 import { PlaylistQueueCheckbox } from "@/components/playlist/PlaylistQueueCheckbox";
+import { getBpmRangeMatch } from "@/lib/bpm/bpmRangeMatch";
 
 type SongTableColMeta = { headClassName?: string; cellClassName?: string };
 
@@ -84,9 +85,15 @@ type Props = {
   results: SongSearchResult[];
   minBPM?: number;
   maxBPM?: number;
+  includeBpmMultiples?: boolean;
 };
 
-export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
+export default function SongResultsTable({
+  results,
+  minBPM,
+  maxBPM,
+  includeBpmMultiples = false,
+}: Props) {
   const { session: tapBpmSession, open: openTapBpm, close: closeTapBpm } =
     useTapBpmSession();
 
@@ -107,6 +114,12 @@ export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
           const bpm = parseFloat(row.tempo);
           const score = row.danceability * 100;
           const key = row.key_of || "-";
+          const bpmMatch = getBpmRangeMatch(
+            row.tempo,
+            minBPM,
+            maxBPM,
+            includeBpmMultiples
+          );
           return (
             <div className="flex min-w-0 max-w-full flex-col gap-2 text-xs">
               <div className="flex min-w-0 gap-2">
@@ -149,10 +162,23 @@ export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
                 {isNaN(bpm) ? (
                   <span className="text-[11px] italic text-gray-400">No BPM</span>
                 ) : (
-                  <Badge color="indigo" size="sm" className="w-fit font-mono text-[11px]">
+                  <Badge
+                    color={bpmMatch.inRange ? "success" : "indigo"}
+                    size="sm"
+                    className="w-fit font-mono text-[11px]"
+                    title={bpmMatch.matchLabel ?? undefined}
+                  >
                     {Math.round(bpm)} BPM
                   </Badge>
                 )}
+                {bpmMatch.matchLabel ? (
+                  <span
+                    className="text-[10px] text-emerald-700 dark:text-emerald-300"
+                    title={bpmMatch.matchLabel}
+                  >
+                    {bpmMatch.factor === 2 ? "sweet spot via x2" : "sweet spot via /2"}
+                  </span>
+                ) : null}
                 <Badge color="gray" size="sm" className="w-fit font-mono text-[11px]">
                   {key}
                 </Badge>
@@ -230,12 +256,30 @@ export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
         header: "BPM",
         cell: (info) => {
           const bpm = parseFloat(info.getValue());
+          const bpmMatch = getBpmRangeMatch(
+            info.getValue(),
+            minBPM,
+            maxBPM,
+            includeBpmMultiples
+          );
           return isNaN(bpm) ? (
             <span className="text-xs italic opacity-50">Not Found</span>
           ) : (
-            <Badge color="indigo" size="sm" className="w-fit font-mono">
+            <div className="flex flex-col items-start gap-1">
+            <Badge
+              color={bpmMatch.inRange ? "success" : "indigo"}
+              size="sm"
+              className="w-fit font-mono"
+              title={bpmMatch.matchLabel ?? undefined}
+            >
               {Math.round(bpm)} BPM
             </Badge>
+            {bpmMatch.matchLabel ? (
+              <span className="text-[10px] text-emerald-700 dark:text-emerald-300">
+                {bpmMatch.factor === 2 ? "matched by x2" : "matched by /2"}
+              </span>
+            ) : null}
+            </div>
           );
         },
       }),
@@ -290,15 +334,15 @@ export default function SongResultsTable({ results, minBPM, maxBPM }: Props) {
         },
       }),
     ],
-    [openTapBpm]
+    [openTapBpm, minBPM, maxBPM, includeBpmMultiples]
   );
 
   const tableData = useMemo(() => {
     if (minBPM && maxBPM && minBPM > 0) {
-      return filterByBpmRange(results, minBPM, maxBPM);
+      return filterByBpmRange(results, minBPM, maxBPM, includeBpmMultiples);
     }
     return results;
-  }, [results, minBPM, maxBPM]);
+  }, [results, minBPM, maxBPM, includeBpmMultiples]);
 
   const table = useReactTable({
     data: tableData,

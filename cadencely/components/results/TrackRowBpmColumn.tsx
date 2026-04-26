@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Badge, Spinner } from "flowbite-react";
 import BpmFeedbackButtons from "@/components/BpmFeedbackButtons";
 import type { BpmFeedbackClientPayload } from "@/lib/bpm/bpmFeedbackApi";
+import type { BpmRangeMatch } from "@/lib/bpm/bpmRangeMatch";
 
 const wrongTempoLinkClassName =
   "cursor-pointer text-[11px] text-gray-400 underline decoration-gray-400/80 underline-offset-2 hover:text-gray-600 dark:text-gray-500 dark:decoration-gray-500/80 dark:hover:text-gray-300";
@@ -15,6 +16,7 @@ export type TrackRowBpmColumnProps = {
   feedbackApiPayload: BpmFeedbackClientPayload | null;
   feedbackOpen: boolean;
   setFeedbackOpen: (open: boolean) => void;
+  bpmRangeMatch?: BpmRangeMatch;
 };
 
 function hasBpm(tempo: string | null): boolean {
@@ -29,6 +31,7 @@ export function TrackRowBpmColumn({
   feedbackApiPayload,
   feedbackOpen,
   setFeedbackOpen,
+  bpmRangeMatch,
 }: TrackRowBpmColumnProps) {
 
   return (
@@ -39,9 +42,19 @@ export function TrackRowBpmColumn({
       <div className="flex min-w-0 flex-col gap-2 text-xs">
         { hasBpm(tempo) ? (
           <div className="min-w-0">
-            <Badge color="indigo" size="sm" className="inline-flex w-fit font-mono text-xs">
+            <Badge
+              color={bpmRangeMatch?.inRange ? "success" : "indigo"}
+              size="sm"
+              className="inline-flex w-fit font-mono text-xs"
+              title={bpmRangeMatch?.matchLabel ?? undefined}
+            >
               {tempo} BPM
             </Badge>
+            {bpmRangeMatch?.matchLabel ? (
+              <p className="text-[10px] text-emerald-700 dark:text-emerald-300">
+                {bpmRangeMatch.factor === 2 ? "matched via x2" : "matched via /2"}
+              </p>
+            ) : null}
             <p
               className={wrongTempoLinkClassName}
               onClick={() => setFeedbackOpen(!feedbackOpen)}

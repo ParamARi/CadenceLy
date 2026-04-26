@@ -18,6 +18,11 @@ import {
   createTrackFeedbackScope,
   type TrackFeedbackSource,
 } from "@/lib/resultsTable/trackFeedbackPayloadFactory";
+import {
+  getBpmRangeMatch,
+  isValidBpmRange,
+  type BpmRangeMatch,
+} from "@/lib/bpm/bpmRangeMatch";
 
 export type TrackRowTempoMode = "artist" | "playlist" | "album";
 
@@ -29,6 +34,7 @@ type UseTrackRowTempoFeedbackArgs = {
   lookupArtistName?: string;
   minBPM?: number;
   maxBPM?: number;
+  includeBpmMultiples?: boolean;
   videoId: string;
   /** Artist table: API `artistName` / scope */
   artistContextName?: string;
@@ -93,6 +99,7 @@ export function useTrackRowTempoFeedback({
   lookupArtistName,
   minBPM,
   maxBPM,
+  includeBpmMultiples = false,
   videoId,
   artistContextName,
   playlistId,
@@ -170,14 +177,25 @@ export function useTrackRowTempoFeedback({
     };
   }, [mode, rawTitle, lookupArtist, videoId, ...lookupEffectDeps]);
 
-  const isOutOfRange = useMemo(() => {
-    if (!tempo || tempo === "-") return false;
-    if (minBPM && maxBPM && minBPM > 0 && maxBPM >= minBPM) {
-      const bpm = parseInt(tempo, 10);
-      return bpm < minBPM || bpm > maxBPM;
+  /**
+   * Session cache only stores lookup results — it must not make rows look
+   * "out of range" while tempo is still loading or unknown ("-", null).
+   */
+  const bpmRangeMatch = useMemo((): BpmRangeMatch | undefined => {
+    if (!isValidBpmRange(minBPM, maxBPM)) return undefined;
+    if (loading || tempo == null || tempo === "" || tempo === "-") {
+      return undefined;
     }
-    return false;
-  }, [tempo, minBPM, maxBPM]);
+    return getBpmRangeMatch(tempo, minBPM, maxBPM, includeBpmMultiples);
+  }, [tempo, minBPM, maxBPM, includeBpmMultiples, loading]);
+
+  const isOutOfRange = useMemo(() => {
+    if (!isValidBpmRange(minBPM, maxBPM)) return false;
+    if (loading || tempo == null || tempo === "" || tempo === "-") {
+      return false;
+    }
+    return !getBpmRangeMatch(tempo, minBPM, maxBPM, includeBpmMultiples).inRange;
+  }, [tempo, minBPM, maxBPM, includeBpmMultiples, loading]);
 
   const source: TrackFeedbackSource =
     mode === "artist"
@@ -258,6 +276,7 @@ export function useTrackRowTempoFeedback({
     matchedArtist,
     onMeasuredBpmFromTap,
     isOutOfRange,
+    bpmRangeMatch,
     feedbackKey,
     feedbackApiPayload,
   };

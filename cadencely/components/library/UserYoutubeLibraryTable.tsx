@@ -256,6 +256,7 @@ function LibraryPlaylistTrackRow({
   playlistId,
   minBPM,
   maxBPM,
+  includeBpmMultiples,
   onOpenTapBpm,
 }: {
   item: PlaylistItemRow;
@@ -263,6 +264,7 @@ function LibraryPlaylistTrackRow({
   playlistId: string;
   minBPM?: number;
   maxBPM?: number;
+  includeBpmMultiples?: boolean;
   onOpenTapBpm: (session: TapBpmSession) => void;
 }) {
   const rawTitle = (item.snippet?.title ?? "").trim() || "(Untitled)";
@@ -288,6 +290,7 @@ function LibraryPlaylistTrackRow({
     matchedArtist,
     onMeasuredBpmFromTap,
     isOutOfRange,
+    bpmRangeMatch,
     feedbackKey,
     feedbackApiPayload,
   } = useTrackRowTempoFeedback({
@@ -297,6 +300,7 @@ function LibraryPlaylistTrackRow({
     lookupArtistName,
     minBPM,
     maxBPM,
+    includeBpmMultiples,
     videoId: vid,
     playlistId,
     lookupEffectDeps: [
@@ -392,6 +396,7 @@ function LibraryPlaylistTrackRow({
                       feedbackApiPayload={feedbackApiPayload}
                       feedbackOpen={feedbackOpen}
                       setFeedbackOpen={setFeedbackOpen}
+                      bpmRangeMatch={bpmRangeMatch}
                     />
                   )}
                 </div>
@@ -459,6 +464,7 @@ function LibraryPlaylistTrackRow({
             feedbackApiPayload={feedbackApiPayload}
             feedbackOpen={feedbackOpen}
             setFeedbackOpen={setFeedbackOpen}
+            bpmRangeMatch={bpmRangeMatch}
           />
         </TableCell>
         <TableCell className="py-1.5 text-center align-middle">
@@ -480,6 +486,7 @@ function ExpandedLibraryPlaylistTracks({
   loadingItemsId,
   minBPM,
   maxBPM,
+  includeBpmMultiples,
   onOpenTapBpm,
   stripeExpandedClassName,
 }: {
@@ -488,6 +495,7 @@ function ExpandedLibraryPlaylistTracks({
   loadingItemsId: string | null;
   minBPM?: number;
   maxBPM?: number;
+  includeBpmMultiples?: boolean;
   onOpenTapBpm: (session: TapBpmSession) => void;
   stripeExpandedClassName: string;
 }) {
@@ -538,6 +546,7 @@ function ExpandedLibraryPlaylistTracks({
                     playlistId={playlistId}
                     minBPM={minBPM}
                     maxBPM={maxBPM}
+                    includeBpmMultiples={includeBpmMultiples}
                     onOpenTapBpm={onOpenTapBpm}
                   />
                 ))}
@@ -553,11 +562,13 @@ function ExpandedLibraryPlaylistTracks({
 type UserYoutubeLibraryTableProps = {
   minBPM?: number;
   maxBPM?: number;
+  includeBpmMultiples?: boolean;
 };
 
 export default function UserYoutubeLibraryTable({
   minBPM,
   maxBPM,
+  includeBpmMultiples,
 }: UserYoutubeLibraryTableProps) {
   const { session: tapBpmSession, open: openTapBpm, close: closeTapBpm } =
     useTapBpmSession();
@@ -769,6 +780,7 @@ export default function UserYoutubeLibraryTable({
                         loadingItemsId={loadingItemsId}
                         minBPM={minBPM}
                         maxBPM={maxBPM}
+                        includeBpmMultiples={includeBpmMultiples}
                         onOpenTapBpm={openTapBpm}
                         stripeExpandedClassName={stripeExpanded}
                       />

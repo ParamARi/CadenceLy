@@ -13,7 +13,6 @@ import UserYoutubeLibraryTable from "@/components/library/UserYoutubeLibraryTabl
 import AppFooter from "@/components/AppFooter";
 import UserAuthControls from "@/components/UserAuthControls";
 import { BuyMeACoffee } from "@/components/BuyMeACoffee";
-import { filterByBpmRange } from "@/lib/filters";
 import {
   searchSongsApi,
   searchArtistsApi,
@@ -35,6 +34,7 @@ export default function Home() {
   const [maxBPM, setMaxBPM] = useState<number>(0);
 
   const [isFilterApplied, setIsFilterApplied] = useState(false);
+  const [includeBpmMultiples, setIncludeBpmMultiples] = useState(false);
   /** Playlist mode: last search returned no loadable playlist (vs. initial empty state). */
   const [playlistHadNoMatch, setPlaylistHadNoMatch] = useState(false);
   const [runningTempoOpen, setRunningTempoOpen] = useState(false);
@@ -162,6 +162,8 @@ export default function Home() {
               onApplyFilter={handleApplyFilter}
               onClearFilter={handleClearFilter}
               isFilterApplied={isFilterApplied}
+              includeBpmMultiples={includeBpmMultiples}
+              onToggleBpmMultiples={setIncludeBpmMultiples}
               onOpenRunningTempo={() => setRunningTempoOpen(true)}
               hideSearchTypeRadios
             />
@@ -171,6 +173,7 @@ export default function Home() {
             <UserYoutubeLibraryTable
               minBPM={isFilterApplied ? minBPM : undefined}
               maxBPM={isFilterApplied ? maxBPM : undefined}
+              includeBpmMultiples={includeBpmMultiples}
             />
           </>
         ) : (
@@ -184,6 +187,8 @@ export default function Home() {
           onApplyFilter={handleApplyFilter}
           onClearFilter={handleClearFilter}
           isFilterApplied={isFilterApplied}
+          includeBpmMultiples={includeBpmMultiples}
+          onToggleBpmMultiples={setIncludeBpmMultiples}
           onOpenRunningTempo={() => setRunningTempoOpen(true)}
           onBrowseMyPlaylists={() => setLibraryMode(true)}
         />
@@ -230,6 +235,7 @@ export default function Home() {
                   results={artistResults as ArtistSearchResult[]} 
                   minBPM={isFilterApplied ? minBPM : undefined} 
                   maxBPM={isFilterApplied ? maxBPM : undefined} 
+                  includeBpmMultiples={includeBpmMultiples}
                 />
               </div>
             ) : (
@@ -246,6 +252,7 @@ export default function Home() {
                   results={playlistResults} 
                   minBPM={isFilterApplied ? minBPM : undefined} 
                   maxBPM={isFilterApplied ? maxBPM : undefined} 
+                  includeBpmMultiples={includeBpmMultiples}
                 />
               </div>
             ) : (
@@ -261,6 +268,7 @@ export default function Home() {
                 results={songResults} 
                 minBPM={isFilterApplied ? minBPM : undefined} 
                 maxBPM={isFilterApplied ? maxBPM : undefined} 
+                includeBpmMultiples={includeBpmMultiples}
               />
             </div>
           ) : (
