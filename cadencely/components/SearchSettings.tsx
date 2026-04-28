@@ -19,6 +19,8 @@ export type SearchSettingsProps = {
   onOpenRunningTempo?: () => void;
   /** Browse signed-in user’s YouTube playlists (requires OAuth token with YouTube scope). */
   onBrowseMyPlaylists?: () => void;
+  /** Browse signed-in user’s Spotify playlists (requires Spotify OAuth token). */
+  onBrowseMySpotifyPlaylists?: () => void;
   /**
    * When true, hide Song/Artist/Album/Playlist radios (e.g. YouTube library view — BPM filter only).
    */
@@ -38,10 +40,12 @@ export default function SearchSettings({
   onToggleBpmMultiples,
   onOpenRunningTempo,
   onBrowseMyPlaylists,
+  onBrowseMySpotifyPlaylists,
   hideSearchTypeRadios = false,
 }: SearchSettingsProps) {
   const { data: session, status } = useSession();
   const [youtubeAccess, setYoutubeAccess] = useState<boolean | null>(null);
+  const [spotifyAccess, setSpotifyAccess] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (status !== "authenticated" || !session?.user) {
@@ -63,25 +67,63 @@ export default function SearchSettings({
     };
   }, [status, session?.user]);
 
+  useEffect(() => {
+    if (status !== "authenticated" || !session?.user) {
+      setSpotifyAccess(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/spotify/access");
+        const data = (await res.json()) as { connected?: boolean };
+        if (!cancelled) setSpotifyAccess(Boolean(data.connected));
+      } catch {
+        if (!cancelled) setSpotifyAccess(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [status, session?.user]);
+
   const showMyPlaylists =
     onBrowseMyPlaylists &&
     status === "authenticated" &&
     session?.user &&
     youtubeAccess === true;
+  const showMySpotifyPlaylists =
+    onBrowseMySpotifyPlaylists &&
+    status === "authenticated" &&
+    session?.user &&
+    spotifyAccess === true;
 
   return (
     <div className="flex flex-col gap-4 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 mt-4">
-      {showMyPlaylists ? (
-        <div className="flex flex-wrap justify-center sm:justify-end">
-          <Button
-            type="button"
-            color="light"
-            size="sm"
-            className="touch-manipulation"
-            onClick={() => onBrowseMyPlaylists()}
-          >
-            My YouTube playlists
-          </Button>
+      {showMyPlaylists || showMySpotifyPlaylists ? (
+        <div className="flex flex-wrap justify-center gap-2 sm:justify-end">
+          {showMyPlaylists ? (
+            <Button
+              type="button"
+              color="light"
+              size="sm"
+              className="touch-manipulation"
+              onClick={() => onBrowseMyPlaylists?.()}
+            >
+              My YouTube playlists
+            </Button>
+          ) : null}
+          {showMySpotifyPlaylists ? (
+            <Button
+              type="button"
+              color="light"
+              size="sm"
+              className="touch-manipulation"
+              onClick={() => onBrowseMySpotifyPlaylists?.()}
+            >
+              My Spotify playlists
+            </Button>
+          ) : null}
         </div>
       ) : null}
       <div

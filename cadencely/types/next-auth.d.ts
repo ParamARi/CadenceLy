@@ -11,11 +11,22 @@ declare module "next-auth" {
 /** Stored in the encrypted JWT cookie — not sent to `useSession()` unless you add it in `session`. */
 declare module "next-auth/jwt" {
   interface JWT {
+    /** Legacy generic token fields retained for backward compatibility. */
     accessToken?: string;
     refreshToken?: string;
-    /** Unix seconds when `accessToken` expires (from Google). */
     expiresAt?: number;
-    /** Set when refresh_token exchange fails; user should sign in again. */
     error?: "RefreshAccessTokenError";
+
+    /** Google OAuth tokens (used by YouTube routes). */
+    googleAccessToken?: string;
+    googleRefreshToken?: string;
+    googleExpiresAt?: number;
+    googleError?: "RefreshAccessTokenError";
+
+    /** Spotify OAuth tokens (used by upcoming Spotify routes). */
+    spotifyAccessToken?: string;
+    spotifyRefreshToken?: string;
+    spotifyExpiresAt?: number;
+    spotifyError?: "RefreshAccessTokenError";
   }
 }

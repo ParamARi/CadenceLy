@@ -1,13 +1,24 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
-import { Button, Spinner } from "flowbite-react";
+import { Button, Select, Spinner } from "flowbite-react";
 
 /**
  * Google sign-in / sign-out for the home header. Feedback submission requires a session.
  */
 export default function UserAuthControls() {
   const { data: session, status } = useSession();
+  const providers = useMemo(
+    () => [
+      { id: "google", label: "YouTube (Google)" },
+      { id: "spotify", label: "Spotify" },
+    ],
+    []
+  );
+  const [providerId, setProviderId] = useState<(typeof providers)[number]["id"]>(
+    providers[0].id
+  );
 
   if (status === "loading") {
     return (
@@ -37,12 +48,23 @@ export default function UserAuthControls() {
   }
 
   return (
-    <Button
-      color="light"
-      size="sm"
-      onClick={() => void signIn("google", { callbackUrl: "/" })}
-    >
-      Sign in with Google
-    </Button>
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <Select
+        sizing="sm"
+        value={providerId}
+        onChange={(e) => setProviderId(e.target.value as (typeof providers)[number]["id"])}
+        className="min-w-[180px]"
+        aria-label="Music platform"
+      >
+        {providers.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.label}
+          </option>
+        ))}
+      </Select>
+      <Button color="light" size="sm" onClick={() => void signIn(providerId, { callbackUrl: "/" })}>
+        Sign in
+      </Button>
+    </div>
   );
 }

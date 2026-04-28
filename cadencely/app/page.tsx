@@ -10,6 +10,7 @@ import PlaylistResultsTable from "@/components/table/PlaylistResultsTable";
 import SearchSettings from "@/components/SearchSettings";
 import RunningTempoModal from "@/components/RunningTempoModal";
 import UserYoutubeLibraryTable from "@/components/library/UserYoutubeLibraryTable";
+import UserSpotifyLibraryTable from "@/components/library/UserSpotifyLibraryTable";
 import AppFooter from "@/components/AppFooter";
 import UserAuthControls from "@/components/UserAuthControls";
 import { BuyMeACoffee } from "@/components/BuyMeACoffee";
@@ -38,8 +39,8 @@ export default function Home() {
   /** Playlist mode: last search returned no loadable playlist (vs. initial empty state). */
   const [playlistHadNoMatch, setPlaylistHadNoMatch] = useState(false);
   const [runningTempoOpen, setRunningTempoOpen] = useState(false);
-  /** Browse signed-in user’s YouTube playlists (hides search UI). */
-  const [libraryMode, setLibraryMode] = useState(false);
+  /** Browse signed-in user’s playlists (hides search UI). */
+  const [libraryMode, setLibraryMode] = useState<"youtube" | "spotify" | null>(null);
 
   const handleApplyFilter = useCallback(() => {
     setIsFilterApplied(true);
@@ -148,7 +149,7 @@ export default function Home() {
                 color="gray"
                 size="sm"
                 className="touch-manipulation"
-                onClick={() => setLibraryMode(false)}
+                onClick={() => setLibraryMode(null)}
               >
                 ← Back to search
               </Button>
@@ -168,13 +169,21 @@ export default function Home() {
               hideSearchTypeRadios
             />
             <h2 className="mb-3 mt-4 text-center text-xl font-semibold text-gray-900 dark:text-white sm:text-left">
-              Your YouTube playlists
+              {libraryMode === "youtube" ? "Your YouTube playlists" : "Your Spotify playlists"}
             </h2>
-            <UserYoutubeLibraryTable
-              minBPM={isFilterApplied ? minBPM : undefined}
-              maxBPM={isFilterApplied ? maxBPM : undefined}
-              includeBpmMultiples={includeBpmMultiples}
-            />
+            {libraryMode === "youtube" ? (
+              <UserYoutubeLibraryTable
+                minBPM={isFilterApplied ? minBPM : undefined}
+                maxBPM={isFilterApplied ? maxBPM : undefined}
+                includeBpmMultiples={includeBpmMultiples}
+              />
+            ) : (
+              <UserSpotifyLibraryTable
+                minBPM={isFilterApplied ? minBPM : undefined}
+                maxBPM={isFilterApplied ? maxBPM : undefined}
+                includeBpmMultiples={includeBpmMultiples}
+              />
+            )}
           </>
         ) : (
           <>
@@ -190,7 +199,8 @@ export default function Home() {
           includeBpmMultiples={includeBpmMultiples}
           onToggleBpmMultiples={setIncludeBpmMultiples}
           onOpenRunningTempo={() => setRunningTempoOpen(true)}
-          onBrowseMyPlaylists={() => setLibraryMode(true)}
+          onBrowseMyPlaylists={() => setLibraryMode("youtube")}
+          onBrowseMySpotifyPlaylists={() => setLibraryMode("spotify")}
         />
 
         <form

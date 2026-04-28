@@ -3,14 +3,28 @@ import type { NextRequest } from "next/server";
 
 const YOUTUBE_DATA_API = "https://www.googleapis.com/youtube/v3";
 
+/**
+ * Auth.js uses `__Secure-*` session cookies on HTTPS. `getToken` must set
+ * `secureCookie: true` to read them; in dev, NODE_ENV is still "development"
+ * so the default would look for the wrong cookie (e.g. local HTTPS + next dev).
+ */
+function useSecureAuthCookie(req: NextRequest): boolean {
+  const authUrl = process.env.AUTH_URL;
+  if (authUrl?.startsWith("https://")) return true;
+  if (authUrl?.startsWith("http://")) return false;
+  if (process.env.NODE_ENV === "production") return true;
+  return req.nextUrl.protocol === "https:";
+}
+
 export async function getGoogleAccessTokenFromCookies(
   req: NextRequest
 ): Promise<string | null> {
   const secret = process.env.AUTH_SECRET;
   if (!secret) return null;
+  const secureCookie = useSecureAuthCookie(req);
   let token: Awaited<ReturnType<typeof getToken>>;
   try {
-    token = await getToken({ req, secret });
+    token = await getToken({ req, secret, secureCookie });
   } catch (e) {
     console.warn("[youtube] getToken failed", e);
     return null;
@@ -18,7 +32,10 @@ export async function getGoogleAccessTokenFromCookies(
   if (token?.error === "RefreshAccessTokenError") {
     return null;
   }
-  const access = token?.accessToken;
+  if (token?.googleError === "RefreshAccessTokenError") {
+    return null;
+  }
+  const access = token?.googleAccessToken ?? token?.accessToken;
   return typeof access === "string" && access.length > 0 ? access : null;
 }
 
