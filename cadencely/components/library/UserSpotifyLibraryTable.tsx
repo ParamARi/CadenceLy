@@ -16,6 +16,8 @@ import { PlaylistQueueCheckbox } from "@/components/playlist/PlaylistQueueCheckb
 import { ParsedGetSongBody } from "@/components/results/ParsedGetSongBody";
 import { TrackRowBpmColumn } from "@/components/results/TrackRowBpmColumn";
 import { useTrackRowTempoFeedback } from "@/hooks/useTrackRowTempoFeedback";
+import { LibraryTracksLoadMore } from "@/components/library/LibraryTracksLoadMore";
+import { LIBRARY_TRACKS_PAGE_SIZE } from "@/lib/library/libraryTrackPagination";
 
 type SpotifyPlaylist = {
   id: string;
@@ -35,11 +37,22 @@ type SpotifyTrackItem = {
   track?: SpotifyTrack | null;
 };
 
+/** Synthetic playlist row id for Spotify saved/liked tracks (`GET /v1/me/tracks`). */
+export const SPOTIFY_LIKED_SONGS_ID = "__liked_songs__";
+
 type UserSpotifyLibraryTableProps = {
   minBPM?: number;
   maxBPM?: number;
   includeBpmMultiples?: boolean;
 };
+
+function buildLikedSongsRow(total: number): SpotifyPlaylist {
+  return {
+    id: SPOTIFY_LIKED_SONGS_ID,
+    name: "Liked Songs",
+    tracks: { total },
+  };
+}
 
 function SpotifyTrackRow({
   playlistId,
@@ -144,8 +157,10 @@ export default function UserSpotifyLibraryTable({
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [tracksByPlaylist, setTracksByPlaylist] = useState<Record<string, SpotifyTrackItem[]>>({});
+  const [tracksTotalByPlaylist, setTracksTotalByPlaylist] = useState<Record<string, number>>({});
   const [trackErrorsByPlaylist, setTrackErrorsByPlaylist] = useState<Record<string, string>>({});
   const [loadingTracksId, setLoadingTracksId] = useState<string | null>(null);
+  const [loadingMoreTracksId, setLoadingMoreTracksId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -153,12 +168,31 @@ export default function UserSpotifyLibraryTable({
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/spotify/playlists?limit=50");
-        const data = (await res.json()) as { items?: SpotifyPlaylist[]; error?: string };
-        if (!res.ok) {
-          throw new Error(typeof data.error === "string" ? data.error : `HTTP ${res.status}`);
+        const [playlistsRes, likedRes] = await Promise.all([
+          fetch("/api/spotify/playlists?limit=50"),
+          fetch("/api/spotify/liked-tracks?limit=1"),
+        ]);
+        const playlistsData = (await playlistsRes.json()) as {
+          items?: SpotifyPlaylist[];
+          error?: string;
+        };
+        const likedData = (await likedRes.json()) as { total?: number; error?: string };
+
+        if (!playlistsRes.ok) {
+          throw new Error(
+            typeof playlistsData.error === "string"
+              ? playlistsData.error
+              : `HTTP ${playlistsRes.status}`
+          );
         }
-        if (!cancelled) setPlaylists(data.items ?? []);
+
+        const likedTotal =
+          likedRes.ok && typeof likedData.total === "number" ? likedData.total : 0;
+        const userPlaylists = playlistsData.items ?? [];
+
+        if (!cancelled) {
+          setPlaylists([buildLikedSongsRow(likedTotal), ...userPlaylists]);
+        }
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : "Could not load Spotify playlists.");
@@ -174,32 +208,61 @@ export default function UserSpotifyLibraryTable({
     };
   }, []);
 
+  const fetchSpotifyTracksPage = async (
+    playlistId: string,
+    offset: number,
+    append: boolean
+  ) => {
+    const params = new URLSearchParams({
+      limit: String(LIBRARY_TRACKS_PAGE_SIZE),
+      offset: String(offset),
+    });
+    const tracksUrl =
+      playlistId === SPOTIFY_LIKED_SONGS_ID
+        ? `/api/spotify/liked-tracks?${params}`
+        : `/api/spotify/playlist-tracks?${params}&playlistId=${encodeURIComponent(playlistId)}`;
+
+    const res = await fetch(tracksUrl);
+    const data = (await res.json()) as {
+      items?: SpotifyTrackItem[];
+      total?: number;
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(typeof data.error === "string" ? data.error : `HTTP ${res.status}`);
+    }
+
+    const pageItems = data.items ?? [];
+    const total =
+      typeof data.total === "number"
+        ? data.total
+        : offset + pageItems.length;
+
+    setTracksByPlaylist((prev) => ({
+      ...prev,
+      [playlistId]: append ? [...(prev[playlistId] ?? []), ...pageItems] : pageItems,
+    }));
+    setTracksTotalByPlaylist((prev) => ({ ...prev, [playlistId]: total }));
+    setTrackErrorsByPlaylist((prev) => {
+      if (!(playlistId in prev)) return prev;
+      const next = { ...prev };
+      delete next[playlistId];
+      return next;
+    });
+  };
+
   useEffect(() => {
-    if (!expandedId || tracksByPlaylist[expandedId]) return;
+    if (!expandedId || expandedId in tracksByPlaylist) return;
     const playlistId = expandedId;
     let cancelled = false;
     async function loadTracks() {
       setLoadingTracksId(playlistId);
       try {
-        const res = await fetch(
-          `/api/spotify/playlist-tracks?playlistId=${encodeURIComponent(playlistId)}&limit=50`
-        );
-        const data = (await res.json()) as { items?: SpotifyTrackItem[]; error?: string };
-        if (!res.ok) {
-          throw new Error(typeof data.error === "string" ? data.error : `HTTP ${res.status}`);
-        }
-        if (!cancelled) {
-          setTracksByPlaylist((prev) => ({ ...prev, [playlistId]: data.items ?? [] }));
-          setTrackErrorsByPlaylist((prev) => {
-            if (!(playlistId in prev)) return prev;
-            const next = { ...prev };
-            delete next[playlistId];
-            return next;
-          });
-        }
+        if (!cancelled) await fetchSpotifyTracksPage(playlistId, 0, false);
       } catch (e) {
         if (!cancelled) {
           setTracksByPlaylist((prev) => ({ ...prev, [playlistId]: [] }));
+          setTracksTotalByPlaylist((prev) => ({ ...prev, [playlistId]: 0 }));
           setTrackErrorsByPlaylist((prev) => ({
             ...prev,
             [playlistId]:
@@ -216,11 +279,27 @@ export default function UserSpotifyLibraryTable({
     };
   }, [expandedId, tracksByPlaylist]);
 
+  const loadMoreTracks = async (playlistId: string) => {
+    const offset = tracksByPlaylist[playlistId]?.length ?? 0;
+    setLoadingMoreTracksId(playlistId);
+    try {
+      await fetchSpotifyTracksPage(playlistId, offset, true);
+    } catch (e) {
+      setTrackErrorsByPlaylist((prev) => ({
+        ...prev,
+        [playlistId]:
+          e instanceof Error ? e.message : "Could not load more tracks for this playlist.",
+      }));
+    } finally {
+      setLoadingMoreTracksId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-12 text-gray-600 dark:text-gray-300">
         <Spinner size="xl" />
-        <p className="text-sm">Loading your Spotify playlists…</p>
+        <p className="text-sm">Loading your Spotify library…</p>
       </div>
     );
   }
@@ -239,7 +318,7 @@ export default function UserSpotifyLibraryTable({
   if (playlists.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-        No Spotify playlists found.
+        No Spotify library items found.
       </p>
     );
   }
@@ -262,7 +341,10 @@ export default function UserSpotifyLibraryTable({
             {playlists.map((pl, rowIdx) => {
               const isExpanded = expandedId === pl.id;
               const items = tracksByPlaylist[pl.id] ?? [];
+              const trackTotal = tracksTotalByPlaylist[pl.id] ?? items.length;
               const trackError = trackErrorsByPlaylist[pl.id];
+              const loadingMore = loadingMoreTracksId === pl.id;
+              const isLikedSongs = pl.id === SPOTIFY_LIKED_SONGS_ID;
               const thumb = pl.images?.[0]?.url;
               return (
                 <Fragment key={pl.id}>
@@ -289,8 +371,19 @@ export default function UserSpotifyLibraryTable({
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={thumb} alt="" className="h-10 w-10 shrink-0 rounded object-cover" />
                         ) : (
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-gray-100 dark:bg-gray-700">
-                            <span className="text-xs text-gray-400">♪</span>
+                          <div
+                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded ${
+                              isLikedSongs
+                                ? "bg-gradient-to-br from-indigo-500 to-purple-600"
+                                : "bg-gray-100 dark:bg-gray-700"
+                            }`}
+                          >
+                            <span
+                              className={`text-xs ${isLikedSongs ? "text-white" : "text-gray-400"}`}
+                              aria-hidden
+                            >
+                              {isLikedSongs ? "♥" : "♪"}
+                            </span>
                           </div>
                         )}
                         <span className="min-w-0 font-medium text-gray-900 dark:text-white">
@@ -332,6 +425,7 @@ export default function UserSpotifyLibraryTable({
                               No tracks in this playlist.
                             </p>
                           ) : (
+                            <>
                             <Table className="w-full text-left text-xs sm:text-sm" hoverable>
                               <TableHead>
                                 <TableRow className="bg-gray-100 dark:bg-gray-800">
@@ -343,9 +437,13 @@ export default function UserSpotifyLibraryTable({
                                 </TableRow>
                               </TableHead>
                               <TableBody>
-                                {items.map((it, idx) => (
+                                {items
+                                  .filter((it) => (it.item ?? it.track) != null)
+                                  .map((it, idx) => (
                                   <SpotifyTrackRow
-                                    key={it.track?.id ?? `${pl.id}-${idx}`}
+                                    key={
+                                      (it.item ?? it.track)?.id ?? `${pl.id}-${idx}`
+                                    }
                                     playlistId={pl.id}
                                     item={it}
                                     idx={idx}
@@ -356,6 +454,13 @@ export default function UserSpotifyLibraryTable({
                                 ))}
                               </TableBody>
                             </Table>
+                            <LibraryTracksLoadMore
+                              loadedCount={items.length}
+                              totalCount={trackTotal}
+                              loading={loadingMore}
+                              onLoadMore={() => void loadMoreTracks(pl.id)}
+                            />
+                            </>
                           )}
                         </div>
                       </TableCell>

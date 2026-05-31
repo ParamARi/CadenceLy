@@ -72,6 +72,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   callbacks: {
     async jwt({ token, account }) {
+      if (account?.provider) {
+        token.provider = account.provider;
+      }
+
       if (account?.provider === "google" && account.access_token) {
         token.googleAccessToken = account.access_token;
         token.googleRefreshToken =
@@ -165,6 +169,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     session({ session, token }) {
       if (session.user && token.sub) {
         session.user.id = token.sub;
+      }
+      if (typeof token.provider === "string") {
+        session.provider = token.provider;
       }
       return session;
     },

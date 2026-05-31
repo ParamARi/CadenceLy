@@ -12,7 +12,7 @@ export default function UserAuthControls() {
   const providers = useMemo(
     () => [
       { id: "google", label: "YouTube (Google)" },
-      { id: "spotify", label: "Spotify" },
+      { id: "spotify", label: "Spotify (Beta)" },
     ],
     []
   );
@@ -33,16 +33,31 @@ export default function UserAuthControls() {
     const label =
       session.user.email ?? session.user.name ?? "Signed in";
     return (
-      <div className="flex flex-wrap items-center justify-end gap-2 text-sm">
-        <span
-          className="max-w-[200px] truncate text-gray-600 dark:text-gray-300"
-          title={label}
-        >
-          {label}
-        </span>
-        <Button color="gray" size="sm" onClick={() => void signOut()}>
-          Sign out
-        </Button>
+      <div className="flex flex-col items-end gap-1 text-sm">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <span
+            className="max-w-[200px] truncate text-gray-600 dark:text-gray-300"
+            title={label}
+          >
+            {label}
+          </span>
+          <Button color="gray" size="sm" onClick={() => void signOut()}>
+            Sign out
+          </Button>
+        </div>
+        {session.provider === "spotify" ? (
+          <span className="max-w-xs text-right text-xs text-gray-500 dark:text-gray-400">
+            Spotify is in development mode. If you would like to be a test user,
+            please contact me at{" "}
+            <a
+              href="mailto:ri.param@gmail.com"
+              className="underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-200"
+            >
+              ri.param@gmail.com
+            </a>
+            .
+          </span>
+        ) : null}
       </div>
     );
   }

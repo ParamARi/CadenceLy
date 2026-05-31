@@ -28,6 +28,8 @@ import { TrackRowBpmColumn } from "@/components/results/TrackRowBpmColumn";
 import { useTapBpmSession } from "@/hooks/useTapBpmSession";
 import { useTrackRowTempoFeedback } from "@/hooks/useTrackRowTempoFeedback";
 import { cn } from "@/lib/utils";
+import { LibraryTracksLoadMore } from "@/components/library/LibraryTracksLoadMore";
+import { LIBRARY_TRACKS_PAGE_SIZE } from "@/lib/library/libraryTrackPagination";
 
 type PlaylistRow = {
   id: string;
@@ -501,6 +503,14 @@ function ExpandedLibraryPlaylistTracks({
 }) {
   const items = itemsByPlaylist[playlistId];
   const loadingItems = loadingItemsId === playlistId;
+  const [visibleCount, setVisibleCount] = useState(LIBRARY_TRACKS_PAGE_SIZE);
+
+  useEffect(() => {
+    setVisibleCount(LIBRARY_TRACKS_PAGE_SIZE);
+  }, [playlistId]);
+
+  const visibleItems = items ? items.slice(0, visibleCount) : [];
+  const totalCount = items?.length ?? 0;
 
   return (
     <TableRow className={stripeExpandedClassName}>
@@ -516,6 +526,7 @@ function ExpandedLibraryPlaylistTracks({
               No videos in this playlist.
             </p>
           ) : (
+            <>
             <Table className="w-full text-left text-xs sm:text-sm" hoverable>
               <TableHead>
                 <TableRow className="bg-gray-100 dark:bg-gray-800 sm:hidden">
@@ -538,7 +549,7 @@ function ExpandedLibraryPlaylistTracks({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {items.map((it, idx) => (
+                {visibleItems.map((it, idx) => (
                   <LibraryPlaylistTrackRow
                     key={it.id ?? `${playlistId}-${idx}`}
                     item={it}
@@ -552,6 +563,16 @@ function ExpandedLibraryPlaylistTracks({
                 ))}
               </TableBody>
             </Table>
+            <LibraryTracksLoadMore
+              loadedCount={visibleItems.length}
+              totalCount={totalCount}
+              onLoadMore={() =>
+                setVisibleCount((n) =>
+                  Math.min(n + LIBRARY_TRACKS_PAGE_SIZE, totalCount)
+                )
+              }
+            />
+            </>
           )}
         </div>
       </TableCell>
