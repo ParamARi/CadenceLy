@@ -9,21 +9,45 @@ async function fetchArtist(ytmusic: YTMusic, query: string) {
   }
 
   //TODO: Add a way for users to select which artist they want to use if there are multiple results.
-  const artistId = searchResults[0].artistId;
+  const artist = searchResults[0];
 
-  // 2. Get the artist details (which includes their albums)
-  const artist = await ytmusic.getArtist(artistId);
+  // 2. Full discography via getArtistAlbums (getArtist().topAlbums only covers
+  // a subset). ytmusic-api 5.3.1 bug: getArtistAlbums returns the artist's
+  // channel id as `albumId` on every row, so real `MPREb…` album ids are
+  // backfilled from topAlbums and an album search, keyed by the unique album
+  // playlistId. Albums left without a real id fall back to their playlistId as
+  // the client `uri`; the album tracklist route resolves those on expand.
+  const [albums, artistFull, albumSearch] = await Promise.all([
+    ytmusic.getArtistAlbums(artist.artistId),
+    ytmusic.getArtist(artist.artistId).catch(() => null),
+    ytmusic.searchAlbums(artist.name).catch(() => []),
+  ]);
 
-  // Combine topAlbums and singles (or whichever album lists are available)
-  const allAlbums = [
-    ...(artist.topAlbums || []),
-    // ...(artist.topSingles || []),
-    // ...(artist.albums || []) // if ytmusic-api updates to include this
-  ].filter(
-    (album: any, index: number, self: any[]) =>
-      // Filter out duplicate albums by albumId
-      index === self.findIndex((a) => a.albumId === album.albumId)
-  );
+  const realAlbumIdByPlaylistId = new Map<string, string>();
+  for (const a of [...(artistFull?.topAlbums ?? []), ...(albumSearch ?? [])]) {
+    if (a.playlistId && a.albumId?.startsWith("MPREb")) {
+      realAlbumIdByPlaylistId.set(a.playlistId, a.albumId);
+    }
+  }
+
+  const sourceAlbums =
+    albums && albums.length > 0 ? albums : artistFull?.topAlbums ?? [];
+
+  const seen = new Set<string>();
+  const allAlbums: Array<Record<string, unknown>> = [];
+  for (const album of sourceAlbums) {
+    const dedupeKey = album.playlistId || album.albumId;
+    if (!dedupeKey || seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+    const realAlbumId = album.albumId?.startsWith("MPREb")
+      ? album.albumId
+      : realAlbumIdByPlaylistId.get(album.playlistId) ?? null;
+    allAlbums.push({
+      ...album,
+      albumId: realAlbumId,
+      songs: [], // We intentionally defer fetching songs until the user expands the album!
+    });
+  }
 
   return {
     artist: {
@@ -31,10 +55,7 @@ async function fetchArtist(ytmusic: YTMusic, query: string) {
       name: artist.name,
       thumbnails: artist.thumbnails,
     },
-    albums: allAlbums.map((album) => ({
-      ...album,
-      songs: [], // We intentionally defer fetching songs until the user expands the album!
-    })),
+    albums: allAlbums,
   };
 }
 
@@ -77,6 +98,82 @@ function normalizePlaylistUrlCandidate(raw: string): string {
     return `https://${t}`;
   }
   return t;
+}
+
+type PlaylistCandidate = {
+  playlistId: string;
+  name: string | null;
+  author: string | null;
+  thumbnailUrl: string | null;
+  videoCount: number | null;
+  /** Query was a pasted URL with `list=` — no search metadata available. */
+  fromUrl?: boolean;
+};
+
+/**
+ * Search-only playlist lookup: returns candidate metadata so the user can pick
+ * which playlist to load. No `getPlaylist`/`getPlaylistVideos` calls here.
+ */
+async function searchPlaylistCandidates(
+  ytmusic: YTMusic,
+  query: string
+): Promise<{ candidates: PlaylistCandidate[] } | null> {
+  const trimmed = query.trim();
+
+  // Pasted URL with list= → single candidate, skip search entirely.
+  try {
+    const url = new URL(normalizePlaylistUrlCandidate(trimmed));
+    const listParam = url.searchParams.get("list");
+    if (listParam) {
+      return {
+        candidates: [
+          {
+            playlistId: listParam,
+            name: null,
+            author: null,
+            thumbnailUrl: null,
+            videoCount: null,
+            fromUrl: true,
+          },
+        ],
+      };
+    }
+  } catch {
+    // Not a URL (or invalid) — fall through to text search
+  }
+
+  const searchResults = await ytmusic.searchPlaylists(trimmed);
+  if (!searchResults || searchResults.length === 0) {
+    return null;
+  }
+
+  const seen = new Set<string>();
+  const candidates: PlaylistCandidate[] = [];
+  for (const row of searchResults.slice(0, 15)) {
+    const r = row as {
+      playlistId?: string;
+      name?: string;
+      artist?: { name?: string };
+      thumbnails?: Array<{ url?: string }>;
+      videoCount?: number;
+    };
+    const id = r?.playlistId;
+    if (typeof id !== "string" || !id || seen.has(id)) continue;
+    seen.add(id);
+    const thumbs = Array.isArray(r.thumbnails) ? r.thumbnails : [];
+    candidates.push({
+      playlistId: id,
+      name: typeof r.name === "string" && r.name ? r.name : null,
+      author:
+        typeof r.artist?.name === "string" && r.artist.name
+          ? r.artist.name
+          : null,
+      thumbnailUrl: thumbs[thumbs.length - 1]?.url ?? null,
+      videoCount: typeof r.videoCount === "number" ? r.videoCount : null,
+    });
+  }
+
+  return candidates.length > 0 ? { candidates } : null;
 }
 
 async function fetchPlaylist(
@@ -190,7 +287,34 @@ export async function GET(request: Request) {
     try {
       const ytmusic = new YTMusic();
       await ytmusic.initialize();
-      const albumDetail = await ytmusic.getAlbum(albumId.trim());
+
+      let resolvedAlbumId = albumId.trim();
+
+      // Album rows from the artist discography can carry only an `OLAK…` album
+      // playlist id (see fetchArtist). Resolve it to a real `MPREb…` album id
+      // by searching with the album title and matching on playlistId.
+      if (!resolvedAlbumId.startsWith("MPREb")) {
+        const fallbackQuery = combinedQuery.trim();
+        if (!fallbackQuery) {
+          return NextResponse.json(
+            { error: "Album id could not be resolved (missing query)" },
+            { status: 404 }
+          );
+        }
+        const matches = await ytmusic.searchAlbums(fallbackQuery);
+        const match = (matches ?? []).find(
+          (a) => a.playlistId === resolvedAlbumId
+        );
+        if (!match?.albumId?.startsWith("MPREb")) {
+          return NextResponse.json(
+            { error: "Album could not be resolved from YouTube Music" },
+            { status: 404 }
+          );
+        }
+        resolvedAlbumId = match.albumId;
+      }
+
+      const albumDetail = await ytmusic.getAlbum(resolvedAlbumId);
       return NextResponse.json({ album: albumDetail }, { status: 200 });
     } catch (error) {
       console.error("Error fetching from ytmusic-api:", error);
@@ -224,11 +348,13 @@ export async function GET(request: Request) {
         combinedQuery || "",
         playlistIdParam || undefined
       );
+    } else if (type === "playlist-search") {
+      data = await searchPlaylistCandidates(ytmusic, combinedQuery || "");
     } else {
       return NextResponse.json(
         {
           error:
-            "Invalid type parameter. Supported types: artist, album, playlist, songVideo",
+            "Invalid type parameter. Supported types: artist, album, playlist, playlist-search, songVideo",
         },
         { status: 400 }
       );

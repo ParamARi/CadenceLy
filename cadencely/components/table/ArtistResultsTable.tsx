@@ -208,6 +208,7 @@ function TrackRow({
 
 function ExpandedAlbumRow({
   albumId,
+  albumTitle,
   artistName,
   minBPM,
   maxBPM,
@@ -215,6 +216,7 @@ function ExpandedAlbumRow({
   onOpenTapBpm,
 }: {
   albumId: string;
+  albumTitle?: string;
   artistName: string;
   minBPM?: number;
   maxBPM?: number;
@@ -229,7 +231,10 @@ function ExpandedAlbumRow({
     async function loadSongs() {
       setLoading(true);
       try {
-        const fetchedSongs = await searchAlbumsApi(albumId);
+        const fetchedSongs = await searchAlbumsApi(
+          albumId,
+          `${albumTitle ?? ""} ${artistName}`.trim() || undefined
+        );
         if (isMounted) setSongs(fetchedSongs);
       } catch (e) {
         console.error("Failed to load album tracklist", e);
@@ -241,7 +246,7 @@ function ExpandedAlbumRow({
     return () => {
       isMounted = false;
     };
-  }, [albumId]);
+  }, [albumId, albumTitle, artistName]);
 
   return (
     <div className="p-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 shadow-inner">
@@ -473,7 +478,10 @@ function SingleAlbumTracklist({
     async function loadSongs() {
       setLoading(true);
       try {
-        const fetchedSongs = await searchAlbumsApi(album.uri);
+        const fetchedSongs = await searchAlbumsApi(
+          album.uri,
+          `${album.title} ${artistName}`.trim() || undefined
+        );
         if (isMounted) setSongs(fetchedSongs);
       } catch (e) {
         console.error("Failed to load album tracklist", e);
@@ -485,7 +493,7 @@ function SingleAlbumTracklist({
     return () => {
       isMounted = false;
     };
-  }, [album.uri]);
+  }, [album.uri, album.title, artistName]);
 
   return (
     <Card className="my-8 border-gray-200 dark:border-gray-700 shadow-md p-2">
@@ -669,6 +677,7 @@ export default function ArtistResultsTable({
                     <TableCell colSpan={row.getVisibleCells().length} className="p-0 border-b border-gray-200 dark:border-gray-700">
                       <ExpandedAlbumRow
                         albumId={row.original.uri}
+                        albumTitle={row.original.title}
                         artistName={row.original.artistName}
                         minBPM={minBPM}
                         maxBPM={maxBPM}

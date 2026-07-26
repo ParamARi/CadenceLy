@@ -7,6 +7,7 @@ import type { ArtistSearchResult, SongSearchResult } from "@/lib/types";
 import SongResultsTable from "@/components/table/SongResultsTable";
 import ArtistResultsTable from "@/components/table/ArtistResultsTable";
 import PlaylistResultsTable from "@/components/table/PlaylistResultsTable";
+import PlaylistCandidateList from "@/components/table/PlaylistCandidateList";
 import SearchSettings from "@/components/SearchSettings";
 import RunningTempoModal from "@/components/RunningTempoModal";
 import UserYoutubeLibraryTable from "@/components/library/UserYoutubeLibraryTable";
@@ -19,6 +20,8 @@ import {
   searchArtistsApi,
   searchPlaylistsApi,
   searchAlbumByQueryApi,
+  fetchPlaylistByIdApi,
+  type PlaylistCandidate,
 } from "@/lib/search";
 
 export default function Home() {
@@ -26,6 +29,12 @@ export default function Home() {
   const [songResults, setSongResults] = useState<SongSearchResult[]>([]);
   const [artistResults, setArtistResults] = useState<ArtistSearchResult[]>([]);
   const [playlistResults, setPlaylistResults] = useState<any[]>([]);
+  /** Playlist search candidates awaiting user choice (chooser list). */
+  const [playlistCandidates, setPlaylistCandidates] = useState<PlaylistCandidate[]>([]);
+  /** Candidate currently being fetched after a pick. */
+  const [loadingPlaylistId, setLoadingPlaylistId] = useState<string | null>(null);
+  /** Per-candidate fetch errors (e.g. private/unavailable playlists). */
+  const [candidateErrors, setCandidateErrors] = useState<Record<string, string>>({});
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchType, setSearchType] = useState<"song" | "artist" | "album" | "playlist">(
@@ -69,6 +78,33 @@ export default function Home() {
   }, []);
 
 
+  /** Fetch a chosen candidate's tracks; on failure show an inline row error. */
+  const loadPlaylistById = useCallback(async (candidate: PlaylistCandidate) => {
+    setLoadingPlaylistId(candidate.playlistId);
+    setCandidateErrors((prev) => {
+      if (!(candidate.playlistId in prev)) return prev;
+      const next = { ...prev };
+      delete next[candidate.playlistId];
+      return next;
+    });
+    try {
+      const playlist = await fetchPlaylistByIdApi(candidate.playlistId);
+      if (!playlist) {
+        throw new Error("Playlist not found");
+      }
+      setPlaylistResults([playlist]);
+    } catch (err) {
+      console.error("Error loading playlist:", err);
+      setCandidateErrors((prev) => ({
+        ...prev,
+        [candidate.playlistId]:
+          "Couldn’t load this playlist — it may be private or unavailable. Try another result.",
+      }));
+    } finally {
+      setLoadingPlaylistId(null);
+    }
+  }, []);
+
   const handleSearch = useCallback(
     async (event: FormEvent) => {
       event.preventDefault();
@@ -84,26 +120,36 @@ export default function Home() {
           setSongResults(songs);
           setArtistResults([]);
           setPlaylistResults([]);
+          setPlaylistCandidates([]);
         } else if (searchType === "artist") {
           const artists = await searchArtistsApi(query.trim());
           setArtistResults(artists);
           setSongResults([]);
           setPlaylistResults([]);
+          setPlaylistCandidates([]);
         } else if (searchType === "playlist") {
-          const playlists = await searchPlaylistsApi(query.trim());
-          setPlaylistResults(playlists);
-          setPlaylistHadNoMatch(playlists.length === 0);
+          const candidates = await searchPlaylistsApi(query.trim());
+          setPlaylistCandidates(candidates);
+          setCandidateErrors({});
+          setPlaylistResults([]);
+          setPlaylistHadNoMatch(candidates.length === 0);
           setArtistResults([]);
           setSongResults([]);
+          if (candidates.length === 1) {
+            // Single match (or pasted URL) — skip the chooser and load tracks.
+            await loadPlaylistById(candidates[0]);
+          }
         } else if (searchType === "album") {
           const albumsAsArtistRows = await searchAlbumByQueryApi(query.trim());
           setArtistResults(albumsAsArtistRows);
           setSongResults([]);
           setPlaylistResults([]);
+          setPlaylistCandidates([]);
         } else {
           setArtistResults([]);
           setSongResults([]);
           setPlaylistResults([]);
+          setPlaylistCandidates([]);
         }
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -111,12 +157,13 @@ export default function Home() {
         setSongResults([]);
         setArtistResults([]);
         setPlaylistResults([]);
+        setPlaylistCandidates([]);
         setPlaylistHadNoMatch(false);
       } finally {
         setIsSearching(false);
       }
     },
-    [query, searchType]
+    [query, searchType, loadPlaylistById]
   );
 
   return (
@@ -258,6 +305,19 @@ export default function Home() {
           ) : searchType === "playlist" ? (
             playlistResults.length > 0 ? (
               <div className="w-full">
+                {playlistCandidates.length > 1 ? (
+                  <div className="mb-3">
+                    <Button
+                      type="button"
+                      color="gray"
+                      size="sm"
+                      className="touch-manipulation"
+                      onClick={() => setPlaylistResults([])}
+                    >
+                      ← Back to results
+                    </Button>
+                  </div>
+                ) : null}
                 <PlaylistResultsTable 
                   results={playlistResults} 
                   minBPM={isFilterApplied ? minBPM : undefined} 
@@ -265,10 +325,24 @@ export default function Home() {
                   includeBpmMultiples={includeBpmMultiples}
                 />
               </div>
+            ) : playlistCandidates.length > 0 ? (
+              <div className="w-full">
+                <p className="mb-2 text-center text-sm text-gray-600 dark:text-gray-400 sm:text-left">
+                  {playlistCandidates.length === 1
+                    ? "1 playlist found — pick it to load its tracks."
+                    : `${playlistCandidates.length} playlists found — pick one to load its tracks.`}
+                </p>
+                <PlaylistCandidateList
+                  candidates={playlistCandidates}
+                  loadingPlaylistId={loadingPlaylistId}
+                  errorsById={candidateErrors}
+                  onSelect={loadPlaylistById}
+                />
+              </div>
             ) : (
               <p className="text-sm text-center text-base-content/70 max-w-lg mx-auto">
                 {playlistHadNoMatch
-                  ? "No playlist could be loaded for that search. YouTube Music’s first matches are not always fetchable — try different keywords, or paste a full playlist URL (must include list=…)."
+                  ? "No playlists found for that search. Try different keywords, or paste a full playlist URL (must include list=…)."
                   : "Start by searching for a playlist above."}
               </p>
             )

@@ -57,44 +57,82 @@ export async function searchArtistsApi(
   return data.search ?? [];
 }
 
+export type PlaylistCandidate = {
+  playlistId: string;
+  name: string;
+  author: string;
+  count: number | null;
+  thumbnailUrl: string | null;
+  /** Query was a pasted URL with `list=` — only the id is known until fetched. */
+  fromUrl?: boolean;
+};
+
+/**
+ * Search-only lookup: returns candidate playlists (metadata, no tracks) so the
+ * user can choose which one to load. Use `fetchPlaylistByIdApi` after a pick.
+ */
 export async function searchPlaylistsApi(
   query: string
-): Promise<PlaylistSearchResult[]> {
+): Promise<PlaylistCandidate[]> {
   const response = await fetch(
-    `/api/ytmusic?query=${encodeURIComponent(query)}&type=playlist`
+    `/api/ytmusic?query=${encodeURIComponent(query)}&type=playlist-search`
   );
   if (response.status === 404) {
     return [];
+  }
+  if (!response.ok) {
+    console.error("Failed to search playlists", response);
+    throw new Error("Failed to search playlists");
+  }
+  const data = await response.json();
+  const rows = Array.isArray(data.candidates) ? data.candidates : [];
+  return rows
+    .map((c: any): PlaylistCandidate => ({
+      playlistId: typeof c.playlistId === "string" ? c.playlistId : "",
+      name:
+        c.name || (c.fromUrl ? "Playlist from pasted link" : "Unknown Playlist"),
+      author: c.author || "Unknown Author",
+      count: typeof c.videoCount === "number" ? c.videoCount : null,
+      thumbnailUrl: typeof c.thumbnailUrl === "string" ? c.thumbnailUrl : null,
+      fromUrl: Boolean(c.fromUrl),
+    }))
+    .filter((c: PlaylistCandidate) => c.playlistId);
+}
+
+/** Fetch one playlist with its tracks (after the user picked a candidate). */
+export async function fetchPlaylistByIdApi(
+  playlistId: string
+): Promise<PlaylistSearchResult | null> {
+  const response = await fetch(
+    `/api/ytmusic?type=playlist&playlistId=${encodeURIComponent(playlistId)}`
+  );
+  if (response.status === 404) {
+    return null;
   }
   if (!response.ok) {
     console.error("Failed to fetch playlist details", response);
     throw new Error("Failed to fetch playlist details");
   }
   const data = await response.json();
-  if (data.playlist) {
-    const pl = data.playlist as {
-      playlistId?: string;
-      name?: string;
-      title?: string;
-      videoCount?: number;
-      videos?: unknown[];
-      artist?: { name?: string };
-      author?: { name?: string };
-    };
-    return [
-      {
-        playlistId: pl.playlistId || "",
-        name: pl.name || pl.title || "Unknown Playlist",
-        author:
-          pl.artist?.name ||
-          pl.author?.name ||
-          "Unknown Author",
-        count: pl.videoCount ?? pl.videos?.length ?? 0,
-        songs: (pl.videos ?? []) as Song[],
-      },
-    ];
+  if (!data.playlist) {
+    return null;
   }
-  return [];
+  const pl = data.playlist as {
+    playlistId?: string;
+    name?: string;
+    title?: string;
+    videoCount?: number;
+    videos?: unknown[];
+    artist?: { name?: string };
+    author?: { name?: string };
+  };
+  return {
+    playlistId: pl.playlistId || playlistId,
+    name: pl.name || pl.title || "Unknown Playlist",
+    author: pl.artist?.name || pl.author?.name || "Unknown Author",
+    count: pl.videoCount ?? pl.videos?.length ?? 0,
+    songs: (pl.videos ?? []) as Song[],
+  };
 }
 
 /**
@@ -162,10 +200,15 @@ export async function fetchSongVideoForTap(
 }
 
 export async function searchAlbumsApi(
-  albumId: string
+  albumId: string,
+  /** Album title + artist; used server-side to resolve `OLAK…` playlist ids. */
+  albumQuery?: string
 ): Promise<any[]> {
+  const queryPart = albumQuery
+    ? `&query=${encodeURIComponent(albumQuery)}`
+    : "";
   const response = await fetch(
-    `/api/ytmusic?type=album&albumId=${encodeURIComponent(albumId)}`
+    `/api/ytmusic?type=album&albumId=${encodeURIComponent(albumId)}${queryPart}`
   );
   if (!response.ok) {
     throw new Error("Failed to fetch album details");
